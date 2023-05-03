@@ -10,17 +10,17 @@ from astropy import units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord
 
-# import libstempo as lst
-# import libstempo.plot as lstplot
-# import libstempo.toasim as toasim
+import libstempo as lst
+import libstempo.plot as lstplot
+import libstempo.toasim as toasim
 
-# import enterprise_gwecc as gwecc
-# from juliacall import Main as jl
-# from enterprise.pulsar import Pulsar
+import enterprise_gwecc as gwecc
+from juliacall import Main as jl
+from enterprise.pulsar import Pulsar
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--psrnumber", type=int)
-parser.add_argument("-d", "--datadir", default='../data/partim/')
+parser.add_argument("-d", "--datadir", default='../data/')
 parser.add_argument("-o", "--outdir", default='simulated_partim/')
 args = parser.parse_args()
 
@@ -33,10 +33,14 @@ if not os.path.exists(output_dir):
 
 print(num)
 
-parfile = sorted(glob.glob(datadir + '*dmxset.par'))[num]
-timfile = sorted(glob.glob(datadir + '*.tim'))[num]
+parfile = sorted(glob.glob(datadir + '/partim/*dmxset.par'))[num]
+timfile = sorted(glob.glob(datadir + '/partim/*.tim'))[num]
 
 print(parfile, timfile)
+
+# Load the noise parameters for 12.5-yr DR noisedict
+with open(f'{datadir}/channelized_12p5yr_v3_full_noisedict.json') as nf:
+    noise_params = json.load(nf)
 
 def run_in_shell(cmd):
     print('"""""\nRUNNING: ', cmd, '\n"""""')
@@ -135,14 +139,106 @@ print(f'Enterprise Pulsar object {psr_ent.name} loaded.')
 print(f'RMS = {psr.rms()*1e6}, chi-sq = {psr.chisq()}')
 
 lstplot.plotres(psr, label="Residuals")
-plt.title(f"{psr.name} Residuals")
+plt.title(f"{psr.name} original residuals")
 plt.legend()
-plt.savefig(f'{output_dir}/plots/{psr.name}_original_residual.pdf')
+plt.savefig(f'{output_dir}/plots/{psr.name}_original_residuals.pdf')
 #plt.show()
 plt.clf()
 
-# toasim.make_ideal(psr)
-# print(f'Made the pulsar {psr.name} ideal.')
-# toasim.add_efac(psr, 1)
+noise_dict = {}
+noise_dict['equads'] = []
+noise_dict['efacs'] = []
+noise_dict['ecorrs'] = []
+
+for ky in list(noise_params.keys()):
+    if psr.name in ky:
+        if 'equad' in ky:
+            noise_dict['equads'].append([ky.replace(psr.name + '_' , ''), noise_params[ky]])
+        if 'efac' in ky:
+            noise_dict['efacs'].append([ky.replace(psr.name + '_' , ''), noise_params[ky]])
+        if 'ecorr' in ky:
+            noise_dict['ecorrs'].append([ky.replace(psr.name + '_' , ''), noise_params[ky]])
+        if 'gamma' in ky:
+            noise_dict['RN_gamma'] = noise_params[ky]
+        if 'log10_A' in ky:
+            noise_dict['RN_Amp'] = 10**noise_params[ky]
+
+noise_dict['equads'] = np.array(noise_dict['equads'])
+noise_dict['efacs'] = np.array(noise_dict['efacs'])
+noise_dict['ecorrs'] = np.array(noise_dict['ecorrs'])    
+
+if len(noise_dict['ecorrs'])==0: #Easier to just delete these dictionary items if no ECORR values. 
+    noise_dict.__delitem__('ecorrs') 
+
+print(f'Noise dict for {psr.name} = {noise_dict}')
+
+#set seed values for the rng
+seed_efac = 1234
+seed_equad = 5678
+seed_jitter = 9101
+seed_red = 1121
+
+# set all residuals to zero
+psr.stoas[:] -= psr.residuals() / 86400.0
+
+# add efacs
+if len(noise_dict['efacs']) > 0:
+    toasim.add_efac(psr, efac = noise_dict['efacs'][:,1], 
+                flagid = 'f', flags = noise_dict['efacs'][:,0], 
+                seed = seed_efac + np.random.randint(47))
+
+# add equads
+toasim.add_equad(psr, equad = noise_dict['equads'][:,1], 
+             flagid = 'f', flags = noise_dict['equads'][:,0], 
+             seed = seed_equad + np.random.randint(47))
+
+# add jitter
+# Only NANOGrav Pulsars have ECORR
+try: 
+    toasim.add_jitter(psr, ecorr = noise_dict['ecorrs'][:,1], 
+                  flagid='f', flags = noise_dict['ecorrs'][:,0], 
+                  coarsegrain = 1.0/86400.0, seed=seed_jitter + np.random.randint(47))
+except KeyError:
+    print(f'Could not add ECORR for {psr.name}!')
+    pass
+
+## add red noise
+toasim.add_rednoise(psr, noise_dict['RN_Amp'], noise_dict['RN_gamma'], 
+                components = 30, seed = seed_red + np.random.randint(47))
+
 signal = add_gwecc(psr, psr_ent, gwecc_params)
 print("Simulated TOAs for", psr.name)
+
+
+lstplot.plotres(psr, label="Residuals")
+plt.plot(psr.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
+plt.title(f'{psr.name} injected signal')
+plt.legend()
+plt.savefig(f'{output_dir}/plots/{psr.name}_injected_signal.pdf')
+#plt.show()
+plt.clf()
+
+sim_par, sim_tim = save_psr_sim(psr, output_dir)
+
+cmd1 = f"tempo2 -newpar -f {sim_par} {sim_tim} -nobs 60000"
+cmd2 = f"tempo2 -newpar -f new.par {sim_tim} -nobs 60000"
+
+run_in_shell(cmd1)
+#run_in_shell(cmd2)
+#run_in_shell(cmd2)
+print('Completed tempo2 fitting.')
+
+run_in_shell(f'mv ./new.par {sim_par}')
+print(f'Fitted par file {sim_par} written')
+
+psrnew = lst.tempopulsar(parfile=sim_par, timfile=sim_tim,  maxobs=60000)
+
+lstplot.plotres(psrnew, label="Residuals")
+plt.plot(psrnew.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
+plt.title(f'{psr.name} fitted residuals')
+plt.legend()
+plt.savefig(f'{output_dir}/plots/{psr.name}_fitted_residuals.pdf')
+#plt.show()
+plt.clf()
+
+print(f'{psr.name} Done!')
