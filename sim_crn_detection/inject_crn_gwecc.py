@@ -1,3 +1,11 @@
+"""
+This code loads a pulsar object using a par and a tim files, makes the pulsar
+ideal (by substracting the residual from the TOAs). Then it injects a WN with
+efac=1, a spatiallly uncorrelated GWB with amplitude 2.4e-15, and a gwecc signal
+from a 3C66B like source assuming it is 10 times closer to us. Then it fits the
+par file with the TOAs after the injection, and save the fitted par file and tim file.
+"""
+
 import json
 import os
 import glob

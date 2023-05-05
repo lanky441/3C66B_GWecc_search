@@ -6,15 +6,12 @@ import json
 workdir = "simulated_partim"
 true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
 
-param_names = ['gwecc_gwb_gamma', 'gwecc_gwb_log10A', 'gwecc_cos_inc', 'gwecc_e0', 'gwecc_eta', 'gwecc_gamma0', 'gwecc_l0', 'gwecc_log10_A', 'gwecc_psi']
+param_names = ['gwecc_gwb_gamma', 'gwecc_gwb_log10A']
 ndim = len(param_names)
 
 truths = [4.333, np.log10(2.4e-15)]
-for i in range(ndim-2):
-    truths.append(true_params[param_names[2+i][len("gwecc_") :]])
 
-
-chain_file = "chains_crn_gwecc/chain_1.0.txt"
+chain_file = "chains_crn/chain_1.txt"
 
 chain = np.loadtxt(chain_file)
 print(chain.shape)

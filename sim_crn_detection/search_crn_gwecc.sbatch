@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=search_crn_gwecc_single
-#SBATCH --output=search_crn_gwecc_single.out
+#SBATCH --output=search_crn_gwecc_single_jumps.out
 #SBATCH -p mamclaughlin
 #
 #SBATCH --ntasks=1

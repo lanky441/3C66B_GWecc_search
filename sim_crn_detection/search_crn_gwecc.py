@@ -1,3 +1,12 @@
+"""
+This code loads all the pulsars for which the par and time files are available in 
+a working directory into enterprise pulsar objects and append them to a list. Then
+it creates a PTA signal model with linearized timing model, fixed WN (efac only), 
+a common uncorrelated red noise for all pulsars, and a gwecc waveform. After that
+it constructs a ptmcmc sampler object to find the values of free parameters
+and runs the sampler.
+"""
+
 import numpy as np
 import json
 import corner
@@ -24,8 +33,9 @@ import juliacall
 
 workdir = "simulated_partim/"
 Niter = 1e6
+hotchains = False
 resume = False
-chaindir = "chains_single/"
+chaindir = "chains_single_jumps/"
 
 true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
 
@@ -165,8 +175,8 @@ sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov,
                  outDir=chaindir, resume=resume)
 
 
-#jp = JP(pta)
-#sampler.addProposalToCycle(jp.draw_from_prior, 20)
+jp = JP(pta)
+sampler.addProposalToCycle(jp.draw_from_prior, 20)
 
 
 # draw from ewf priors
@@ -174,7 +184,7 @@ sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov,
 # for ew in ew_params:
 #    sampler.addProposalToCycle(jp.draw_from_par_prior(ew),5)
 
-sampler.sample(x0, Niter) #, writeHotChains=True)
+sampler.sample(x0, Niter, writeHotChains=hotchains)
 
 print("Sampler run completed successfully.")
 

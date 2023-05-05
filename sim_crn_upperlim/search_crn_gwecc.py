@@ -1,3 +1,12 @@
+"""
+This code loads all the pulsars for which the par and time files are available in 
+a working directory into enterprise pulsar objects and append them to a list. Then
+it creates a PTA signal model with linearized timing model, fixed WN (efac only), 
+a common uncorrelated red noise for all pulsars, and a gwecc waveform. After that
+it constructs a ptmcmc sampler object to find the values of free parameters
+and runs the sampler.
+"""
+
 import numpy as np
 import json
 import corner
