@@ -1,14 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=search_crn_gwecc
-#SBATCH --output=search_crn_gwecc.out
+#SBATCH --job-name=search_crn_gwecc_single
+#SBATCH --output=search_crn_gwecc_single.out
 #SBATCH -p mamclaughlin
 #
-#SBATCH --ntasks=8
-#SBATCH --mem=64G
+#SBATCH --ntasks=1
 
 which python
 
-mpirun -np 4 python search_crn_gwecc.py
+python search_crn_gwecc.py
 
 echo "Run complete."

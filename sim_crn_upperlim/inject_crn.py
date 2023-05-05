@@ -33,10 +33,6 @@ timfile = sorted(glob.glob(datadir + '/partim/*.tim'))[num]
 print(parfile, timfile)
 
 
-def run_in_shell(cmd):
-    print('"""""\nRUNNING: ', cmd, '\n"""""')
-    subprocess.call(cmd,shell=True)
-
 # function to save new par and tim files
 def save_psr_sim(psr, savedir):
     print("Writing simulated data for", psr.name)
@@ -65,37 +61,24 @@ plt.clf()
 
 # set all residuals to zero
 toasim.make_ideal(psr)
-# psr.stoas[:] -= psr.residuals() / 86400.0
 
+# add white efac noise
 toasim.add_efac(psr,efac=1.0)
 
 # add common red noise
 toasim.add_gwb(psr, flow=1e-9, fhigh=1e-7, gwAmp=2.4e-15)
 
+# fit after injection
+psr.fit(iters=3)
 
 # save new par and tim file after injections
 sim_par, sim_tim = save_psr_sim(psr, output_dir)
-
-# tempo2 commands to run for fitting
-cmd1 = f"tempo2 -newpar -f {sim_par} {sim_tim} -nobs 60000"
-cmd2 = f"tempo2 -newpar -f new.par {sim_tim} -nobs 60000"
-
-# tempo2 fitting after injection
-run_in_shell(cmd1)
-#run_in_shell(cmd2)
-#run_in_shell(cmd2)
-print('Completed tempo2 fitting.')
-
-# moving the fitted par file to correct location
-run_in_shell(f'mv ./new.par {sim_par}')
-print(f'Fitted par file {sim_par} written')
 
 # loading the pulsar with simulated par and tim files
 psrnew = lst.tempopulsar(parfile=sim_par, timfile=sim_tim,  maxobs=60000)
 
 # residual plot with final par and tim files
 lstplot.plotres(psrnew, label="Residuals")
-plt.plot(psrnew.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
 plt.title(f'{psr.name} fitted residuals')
 plt.legend()
 plt.savefig(f'{output_dir}/plots/{psr.name}_fitted_residuals.pdf')

@@ -1,11 +1,10 @@
 #!/bin/bash
 
-#SBATCH --job-name=search_crn_gwecc
-#SBATCH --output=search_crn_gwecc.out
-#SBATCH -p mamclaughlin
-#
-#SBATCH --ntasks=8
+#SBATCH -J search_crn_gwecc
+#SBATCH -o search_crn_gwecc.out
+#SBATCH -p standby
 #SBATCH --mem=64G
+#SBATCH -n 4
 
 which python
 

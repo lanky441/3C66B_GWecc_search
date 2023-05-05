@@ -24,8 +24,9 @@ import juliacall
 
 workdir = "simulated_partim/"
 Niter = 1e6
+hotchains = True
 resume = False
-chaindir = "chains/"
+chaindir = "chains_crn_gwecc/"
 
 true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
 
@@ -44,7 +45,7 @@ priors = {
     "gammap": 0,
     "l0": Uniform(0.0,2*np.pi)(f"{name}_l0"),
     "lp": 0.0,
-    "log10_A": Uniform(-9, -5)(f"{name}_log10_A"),
+    "log10_A": Uniform(-10, -5)(f"{name}_log10_A"),
 }
 
 x0_close_to_true_params = False
@@ -70,7 +71,7 @@ Tspan = tmax - tmin
 print('tmax = MJD ', tmax/86400)
 print('Tspan = ', Tspan/const.yr, 'years')
 
-tm = MarginalizingTimingModel() #use_svd?
+tm = MarginalizingTimingModel(use_svd=True) #use_svd?
 
 wn = MeasurementNoise(efac=1)
 
@@ -137,8 +138,7 @@ for i in range(ndim):
     if i < ndim - n_cmnparams:
         print('Already added.')
     else:
-        # x_true.append(true_params[pta.param_names[i][(len(name) + 1) :]])
-        x_true.append(pta.params[i].sample())
+        x_true.append(true_params[pta.param_names[i][(len(name) + 1) :]])
 print(x_true)
 print("Log-likelihood at true params is", pta.get_lnlikelihood(x_true))
 
@@ -174,7 +174,7 @@ sampler.addProposalToCycle(jp.draw_from_prior, 20)
 # for ew in ew_params:
 #    sampler.addProposalToCycle(jp.draw_from_par_prior(ew),5)
 
-sampler.sample(x0, Niter, writeHotChains=True)
+sampler.sample(x0, Niter, writeHotChains=hotchains)
 
 print("Sampler run completed successfully.")
 

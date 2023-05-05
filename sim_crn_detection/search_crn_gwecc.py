@@ -25,7 +25,7 @@ import juliacall
 workdir = "simulated_partim/"
 Niter = 1e6
 resume = False
-chaindir = "chains/"
+chaindir = "chains_single/"
 
 true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
 
@@ -165,8 +165,8 @@ sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov,
                  outDir=chaindir, resume=resume)
 
 
-jp = JP(pta)
-sampler.addProposalToCycle(jp.draw_from_prior, 20)
+#jp = JP(pta)
+#sampler.addProposalToCycle(jp.draw_from_prior, 20)
 
 
 # draw from ewf priors
@@ -174,7 +174,7 @@ sampler.addProposalToCycle(jp.draw_from_prior, 20)
 # for ew in ew_params:
 #    sampler.addProposalToCycle(jp.draw_from_par_prior(ew),5)
 
-sampler.sample(x0, Niter, writeHotChains=True)
+sampler.sample(x0, Niter) #, writeHotChains=True)
 
 print("Sampler run completed successfully.")
 
