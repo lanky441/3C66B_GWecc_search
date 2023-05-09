@@ -32,10 +32,12 @@ import juliacall
 
 
 workdir = "simulated_partim/"
+add_jumps = True
 Niter = 1e6
-hotchains = False
+hotchains = True
 resume = False
-chaindir = "chains_single_jumps/"
+chaindir = "chains2/"
+x0_close_to_true_params = False
 
 true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
 
@@ -56,8 +58,6 @@ priors = {
     "lp": 0.0,
     "log10_A": Uniform(-9, -5)(f"{name}_log10_A"),
 }
-
-x0_close_to_true_params = False
 
 parfiles = sorted(glob.glob(workdir + '*.par'))
 timfiles = sorted(glob.glob(workdir + '*.tim'))
@@ -175,8 +175,9 @@ sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov,
                  outDir=chaindir, resume=resume)
 
 
-jp = JP(pta)
-sampler.addProposalToCycle(jp.draw_from_prior, 20)
+if add_jumps:
+    jp = JP(pta)
+    sampler.addProposalToCycle(jp.draw_from_prior, 20)
 
 
 # draw from ewf priors
