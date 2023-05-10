@@ -36,8 +36,8 @@ add_jumps = True
 Niter = 1e6
 hotchains = True
 resume = False
-chaindir = "chains/"
-x0_close_to_true_params = False
+chaindir = "chains_true/"
+x0_close_to_true_params = True
 
 true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
 
@@ -48,8 +48,8 @@ def get_ew_groups(pta, name='gwecc'):
     """
     params = pta.param_names
     ndim = len(params)
-    #groups = [list(np.arange(0, ndim))]
-    groups = []
+    groups = [list(np.arange(0, ndim))]
+    #groups = []
 
     snames = np.unique([[qq.signal_name for qq in pp._signals] 
                         for pp in pta._signalcollections])
@@ -63,15 +63,15 @@ def get_ew_groups(pta, name='gwecc'):
 
     if f'{name}_e0' in params:
         gpars = [x for x in params if name in x] #global params
-        # groups.append([params.index(gp) for gp in gpars]) #add global params
+        groups.append([params.index(gp) for gp in gpars]) #add global params
 
         #pair global params
-        # groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_eta')]])
+        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_eta')]])
         # groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_e0')]])
-        # groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_cos_inc')]])
+        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_cos_inc')]])
         # groups.extend([[params.index(f'{name}_eta'), params.index(f'{name}_cos_inc')]])
         # groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_l0')]])
-        # groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_psi')]])
+        groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_psi')]])
         # groups.extend([[params.index(f'{name}_psi'), params.index(f'{name}_l0')]])
 
     return groups
@@ -221,7 +221,7 @@ sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov, groups=groups,
 
 if add_jumps:
     jp = JP(pta)
-    sampler.addProposalToCycle(jp.draw_from_prior, 20)
+    sampler.addProposalToCycle(jp.draw_from_prior, 40)
 
 
 # draw from ewf priors
