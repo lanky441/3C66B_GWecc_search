@@ -32,7 +32,7 @@ def plot_upper_limit(
     chain_ampl = chain[:, ampl_idx]
     chain_freq = chain[:, freq_idx]
 
-    weights = upper_limit_weight(chain_ampl, -11, -5)
+    weights = upper_limit_weight(chain_ampl, -10, -5)
 
     log10_F_min, log10_F_max = xparam_lims
     log10_F_lins = np.linspace(log10_F_min, log10_F_max, xparam_bins + 1)
