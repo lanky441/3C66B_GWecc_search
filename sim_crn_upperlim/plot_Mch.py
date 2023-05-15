@@ -13,6 +13,7 @@ def plot_Mch(
     chain,
     gwdist,
     log10_F,
+    reweight=True,
 ):
     def get_Mch(log10_A, e0, eta):
         Mch = jl.mass_from_gwdist(log10_A, log10_F, e0, gwdist, eta).Mch
@@ -29,8 +30,10 @@ def plot_Mch(
         get_Mch(log10_A, e0, eta) 
         for log10_A, e0, eta in zip(log10_As, e0s, etas)
     ])
+    if not reweight:
+        Mchs = np.log10(Mchs)
 
-    weights = upper_limit_weight(log10_As, -10, -5)
+    weights = upper_limit_weight(log10_As, -10, -5) if reweight else np.ones_like(log10_As)/len(log10_As)
 
     Mchs_reweighted = nestle.resample_equal(Mchs, weights)
     Mch_95up = np.quantile(Mchs_reweighted, 0.95)
@@ -64,14 +67,15 @@ def plot_Mch(
 
     plt.subplot(211)
     plt.violinplot(Mch_violin_data, positions=e0_mids, widths=violin_width, showextrema=False, quantiles=[[0.95]]*len(Mch_violin_data))
-    plt.ylabel("$M_{ch}$ ($M_{sun}$)", fontsize=13)
+    Mch_label = "$M_{ch}$ ($M_{sun}$)" if reweight else "$\\log_{10} M_{ch}$ ($M_{sun}$)"
+    plt.ylabel(Mch_label, fontsize=13)
     plt.xlabel("$e_0$", fontsize=13)
     plt.tick_params(labelsize=11)
 
     plt.subplot(212)
     plt.hist(Mchs_reweighted, density=True, bins=16)
     plt.axvline(Mch_95up)
-    plt.xlabel("$M_{ch}$ ($M_{sun}$)", fontsize=13)
+    plt.xlabel(Mch_label, fontsize=13)
 
 if __name__ == "__main__":
     np.int = np.int64
@@ -91,5 +95,6 @@ if __name__ == "__main__":
         chain,
         gwdist,
         log10_F,
+        reweight=False,
     )
     plt.show()
