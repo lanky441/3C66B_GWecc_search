@@ -14,8 +14,8 @@ for i in range(ndim):
     truths.append(true_params[param_names[i][len("gwecc_") :]])
 
 
-#chain_file = "chains/chain_1.0.txt"
-chain_file = "chains2/chain_1.0.txt"
+chain_file = "chains/chain_1.0.txt"
+#chain_file = "chains2/chain_1.0.txt"
 #chain_file = "chains_true/chain_1.0.txt"
 
 chain = np.loadtxt(chain_file)
