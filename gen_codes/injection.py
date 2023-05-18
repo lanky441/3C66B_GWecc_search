@@ -1,9 +1,12 @@
 """
-This code loads a pulsar object using a par and a tim files, makes the pulsar
-ideal (by substracting the residual from the TOAs). Then it injects a WN with
-efac=1, individual pulsar red noise with parameters from noise dict, and a gwecc signal
-from a 3C66B like source assuming it is 10 times closer to us. Then it fits the
-par file with the TOAs after the injection, and save the fitted par file and tim file.
+This code loads a pulsar object from a par and a tim files, makes the pulsar
+ideal (by substracting the residual from the TOAs). Then it can inject different
+kind of signals based on arguments. The options are
+    (a) white noise with either efac=1 (default) or from noise dict values, 
+    (b) individual pulsar red noise with parameters from noise dict, 
+    (c) a common red noise
+    (d) a gwecc signal from a 3C66B like source assuming it is 10 times closer to us. 
+Then it fits the par file with the TOAs after the injection, and save the fitted par file and tim file.
 """
 
 import json
@@ -33,6 +36,7 @@ parser.add_argument("-d", "--datadir", default='../data')
 parser.add_argument("-o", "--outdir", default='simulated_partim/')
 
 parser.add_argument("-gwecc", "--inject_gwecc", action='store_true')
+parser.add_argument("-psrterm", "--include_psrterm", action='store_true')
 parser.add_argument("-irn", "--inject_irn", action='store_true')
 parser.add_argument("-crn", "--inject_crn", action='store_true')
 parser.add_argument("-wn", "--wn_from_dict", action='store_true')
@@ -44,11 +48,16 @@ datadir = args.datadir
 output_dir = args.outdir
 
 inject_gwecc = args.inject_gwecc
+include_psrterm = args.include_psrterm
 inject_irn = args.inject_irn
 inject_crn = args.inject_crn
 wn_from_dict = args.wn_from_dict
 
-gwb_log10_A = 2.4e-15
+if include_psrterm and not inject_gwecc:
+    sys.exit("Cannot include psrterm when not injecting gwecc signal.")
+
+# Amplitude of the common rednoise
+gwb_A = 2.4e-15
 
 
 if not os.path.exists(output_dir):
@@ -61,12 +70,13 @@ timfile = f'{datadir}/partim/{psrname}_NANOGrav_12yv4.tim'
 
 
 # loading libstempo pulsar object
-psr = lst.tempopulsar(parfile=parfile, timfile=timfile, maxobs=1e5)
+psr = lst.tempopulsar(parfile=parfile, timfile=timfile, maxobs=60000)
 print(f'Libstempo object {psr.name} loaded.')
 
 # loading enterprise pulsar object
 psr_ent = Pulsar(parfile, timfile)
 print(f'Enterprise Pulsar object {psr_ent.name} loaded.')
+print(f'Pulsar distance = {psr_ent.pdist}')
 
 
 if not os.path.exists(f"{output_dir}/plots"):
@@ -136,12 +146,13 @@ gwecc_params = {
     "log10_F": log10F,
     "e0": ecc0,
     "gamma0": np.pi/3,
-    "gammap": 0.0,
+    "gammap": np.pi/3,
     "l0": np.pi/2,
-    "lp": 0.0,
+    "lp": np.pi/2,
     "tref": tref.mjd * day_to_s,
     "log10_A": log10_A,
     "gwdist": dL,
+    "delta_pdist": 0.0,
 }
 
 # storing the source parameters
@@ -150,7 +161,7 @@ with open(f"{output_dir}/true_gwecc_params.dat", "w") as outfile:
 
 
 # function to add gwecc signal to the pulsar
-def add_gwecc(psr, psr_ent, gwecc_params, psrTerm=False):
+def add_gwecc(psr, psr_ent, gwecc_params, psrTerm=include_psrterm):
 
     signal = (
         np.array(
@@ -215,7 +226,7 @@ if wn_from_dict or inject_irn:
                 if 'log10_A' in ky:
                     noise_dict['RN_Amp'] = 10**noise_params[ky]
                         
-    print(noise_dict)
+    print('noise_dict = {noise_dict}')
                 
 
 
@@ -257,9 +268,9 @@ if inject_irn:
 # add common red noise
 if inject_crn:
     print("Adding common red noise.")
-    toasim.add_gwb(psr, flow=1e-9, fhigh=1e-7, gwAmp=gwb_log10_A)
+    toasim.add_gwb(psr, flow=1e-9, fhigh=1e-7, gwAmp=gwb_A)
     
-    gwb_params = {"log10_A": gwb_log10_A,
+    gwb_params = {"log10_A": np.log10(gwb_A),
                   "gamma": 13/3}
     
     # storing the source parameters
@@ -269,11 +280,13 @@ if inject_crn:
 # add gwecc signal
 if inject_gwecc:
     print('Adding gwecc signal.')
+    if include_psrterm:
+        print("Pulsar term contribution is included.")
     signal = add_gwecc(psr, psr_ent, gwecc_params)
 
     # residual plot after injecting the signals
     lstplot.plotres(psr, label="Residuals")
-    plt.plot(psr.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
+    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 100, c="k", label="10 * Injected signal", zorder=100)
     plt.title(f'{psr.name} injected signal')
     plt.legend()
     plt.savefig(f'{output_dir}/plots/{psr.name}_injected_signal.pdf')
@@ -286,16 +299,14 @@ psr.fit(iters=3)
 # save new par and tim file after injections
 sim_par, sim_tim = save_psr_sim(psr, output_dir)
 
-# loading the pulsar with simulated par and tim files
-psrnew = lst.tempopulsar(parfile=sim_par, timfile=sim_tim,  maxobs=1e5)
 
 # residual plot with final par and tim files
-lstplot.plotres(psrnew, label="Residuals")
+lstplot.plotres(psr, label="Residuals")
 if inject_gwecc:
-    plt.plot(psrnew.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
-plt.title(f'{psrnew.name}, RMS = {psr.rms()*1e6} us')
+    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 100, c="k", label="Injected signal", zorder=100)
+plt.title(f'{psr.name}, RMS = {psr.rms()*1e6} us')
 plt.legend()
-plt.savefig(f'{output_dir}/plots/{psrnew.name}_fitted_residuals.pdf')
+plt.savefig(f'{output_dir}/plots/{psr.name}_fitted_residuals.pdf')
 #plt.show()
 plt.clf()
 

@@ -66,12 +66,13 @@ timfile = f'{datadir}/partim/{psrname}_NANOGrav_12yv4.tim'
 
 
 # loading libstempo pulsar object
-psr = lst.tempopulsar(parfile=parfile, timfile=timfile, maxobs=1e5)
+psr = lst.tempopulsar(parfile=parfile, timfile=timfile, maxobs=60000)
 print(f'Libstempo object {psr.name} loaded.')
 
 # loading enterprise pulsar object
 psr_ent = Pulsar(parfile, timfile)
 print(f'Enterprise Pulsar object {psr_ent.name} loaded.')
+print(f'Pulsar distance = {psr_ent.pdist}')
 
 
 if not os.path.exists(f"{output_dir}/plots"):
@@ -141,12 +142,13 @@ gwecc_params = {
     "log10_F": log10F,
     "e0": ecc0,
     "gamma0": np.pi/3,
-    "gammap": 0.0,
+    "gammap": np.pi/3,
     "l0": np.pi/2,
-    "lp": 0.0,
+    "lp": np.pi/2,
     "tref": tref.mjd * day_to_s,
     "log10_A": log10_A,
     "gwdist": dL,
+    "delta_pdist": 0,
 }
 
 # storing the source parameters
@@ -155,7 +157,7 @@ with open(f"{output_dir}/true_gwecc_params.dat", "w") as outfile:
 
 
 # function to add gwecc signal to the pulsar
-def add_gwecc(psr, psr_ent, gwecc_params, psrTerm=False):
+def add_gwecc(psr, psr_ent, gwecc_params, psrTerm=include_psrterm):
 
     signal = (
         np.array(
@@ -274,11 +276,13 @@ if inject_crn:
 # add gwecc signal
 if inject_gwecc:
     print('Adding gwecc signal.')
+    if include_psrterm:
+        print("Pulsar term contribution is included")
     signal = add_gwecc(psr, psr_ent, gwecc_params)
 
     # residual plot after injecting the signals
     lstplot.plotres(psr, label="Residuals")
-    plt.plot(psr.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
+    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 10, c="k", label="10 * Injected signal", zorder=100)
     plt.title(f'{psr.name} injected signal')
     plt.legend()
     plt.savefig(f'{output_dir}/plots/{psr.name}_injected_signal.pdf')
@@ -292,15 +296,15 @@ psr.fit(iters=3)
 sim_par, sim_tim = save_psr_sim(psr, output_dir)
 
 # loading the pulsar with simulated par and tim files
-psrnew = lst.tempopulsar(parfile=sim_par, timfile=sim_tim,  maxobs=1e5)
+# psrnew = lst.tempopulsar(parfile=sim_par, timfile=sim_tim,  maxobs=1e5)
 
 # residual plot with final par and tim files
-lstplot.plotres(psrnew, label="Residuals")
+lstplot.plotres(psr, label="Residuals")
 if inject_gwecc:
-    plt.plot(psrnew.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
-plt.title(f'{psrnew.name}, RMS = {psr.rms()*1e6} us')
+    plt.plot(psr.toas(), signal * day_to_s * 1e6, c="k", label="Injected signal", zorder=100)
+plt.title(f'{psr.name}, RMS = {psr.rms()*1e6} us')
 plt.legend()
-plt.savefig(f'{output_dir}/plots/{psrnew.name}_fitted_residuals.pdf')
+plt.savefig(f'{output_dir}/plots/{psr.name}_fitted_residuals.pdf')
 #plt.show()
 plt.clf()
 
