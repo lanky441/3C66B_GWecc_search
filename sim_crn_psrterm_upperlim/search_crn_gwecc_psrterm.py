@@ -36,7 +36,7 @@ add_jumps = True
 Niter = 1e6
 hotchains = True
 resume = True
-chaindir = "chains_fixedpdist/"
+chaindir = "chains/"
 x0_close_to_true_params = False
 
 def get_ew_groups(pta, name='gwecc'):
@@ -91,11 +91,11 @@ priors = {
     "log10_F": true_params["log10_F"],
     "e0": Uniform(0.001, 0.8)(f"{name}_e0"),
     "gamma0": Uniform(0, np.pi)(f"{name}_gamma0"),
-    "gammap": 0,
+    "gammap": Uniform(0, np.pi),
     "l0": Uniform(0.0,2*np.pi)(f"{name}_l0"),
-    "lp": 0.0,
-    "log10_A": Uniform(-9, -5)(f"{name}_log10_A"),
-    "delta_pdist": 0.0,
+    "lp": Uniform(0.0,2*np.pi),
+    "log10_A": Uniform(-11, -5)(f"{name}_log10_A"),
+    "delta_pdist": TruncNormal(0, 1, -1, 1),
 }
 
 parfiles = sorted(glob.glob(workdir + '*.par'))
@@ -125,7 +125,7 @@ wn = MeasurementNoise(efac=1)
 
 crn = blocks.common_red_noise_block(prior='log-uniform', name='gwb', Tspan=Tspan)
 
-wf = gwecc_target_block(**priors, spline=True, psrTerm=True, tie_psrTerm=True, name='')
+wf = gwecc_target_block(**priors, spline=True, psrTerm=True, tie_psrTerm=False, name='')
 
 signal = tm + wn + crn + wf
 
@@ -175,25 +175,25 @@ def gwecc_target_likelihood_my(pta):
 
 get_lnlikelihood = gwecc_target_likelihood_my(pta)
 
-comm_params = [x for x in pta.param_names if name in x]
-print(f'gwecc params = {comm_params}')
-n_cmnparams = len(comm_params)
+# comm_params = [x for x in pta.param_names if name in x]
+# print(f'gwecc params = {comm_params}')
+# n_cmnparams = len(comm_params)
 
-x_true = []
-#for psr in psrs:
-#    x_true.append(0)
-x_true.append(13/3.)
-x_true.append(np.log10(2.4e-15))
+# x_true = []
+# for psr in psrs:
+#     x_true.append(0)
+# x_true.append(13/3.)
+# x_true.append(np.log10(2.4e-15))
 
-ndim = len(pta.param_names)
-for i in range(ndim):
-    if i < ndim - n_cmnparams:
-        print('Already added.')
-    else:
-        x_true.append(true_params[pta.param_names[i][(len(name) + 1) :]])
-        # x_true.append(pta.params[i].sample())
-print(x_true)
-print("Log-likelihood at true params is", pta.get_lnlikelihood(x_true))
+# ndim = len(pta.param_names)
+# for i in range(ndim):
+#     if i < ndim - n_cmnparams:
+#         print('Already added.')
+#     else:
+#         x_true.append(true_params[pta.param_names[i][(len(name) + 1) :]])
+#         # x_true.append(pta.params[i].sample())
+# print(x_true)
+# print("Log-likelihood at true params is", pta.get_lnlikelihood(x_true))
 
 
 if x0_close_to_true_params:
@@ -216,13 +216,13 @@ x0 = np.hstack(x0)
 
 cov = np.diag(np.ones(ndim) * 0.1**2)
 
-sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov,  groups=groups,
+sampler = ptmcmc(ndim, pta.get_lnlikelihood, get_lnprior, cov,  groups=groups,
                  outDir=chaindir, resume=resume)
 
 
 if add_jumps:
     jp = JP(pta)
-    sampler.addProposalToCycle(jp.draw_from_prior, 30)
+    sampler.addProposalToCycle(jp.draw_from_prior, 40)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]

@@ -286,7 +286,7 @@ if inject_gwecc:
 
     # residual plot after injecting the signals
     lstplot.plotres(psr, label="Residuals")
-    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 100, c="k", label="10 * Injected signal", zorder=100)
+    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 100, c="k", label="100 * Injected signal", zorder=100)
     plt.title(f'{psr.name} injected signal')
     plt.legend()
     plt.savefig(f'{output_dir}/plots/{psr.name}_injected_signal.pdf')
@@ -303,7 +303,7 @@ sim_par, sim_tim = save_psr_sim(psr, output_dir)
 # residual plot with final par and tim files
 lstplot.plotres(psr, label="Residuals")
 if inject_gwecc:
-    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 100, c="k", label="Injected signal", zorder=100)
+    plt.plot(psr.toas(), signal * day_to_s * 1e6 * 100, c="k", label="100 * Injected signal", zorder=100)
 plt.title(f'{psr.name}, RMS = {psr.rms()*1e6} us')
 plt.legend()
 plt.savefig(f'{output_dir}/plots/{psr.name}_fitted_residuals.pdf')

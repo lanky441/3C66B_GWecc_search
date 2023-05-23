@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=search_crn_gwecc_psrterm
-#SBATCH --output=search_crn_gwecc_psrterm_fixedpdist.out
+#SBATCH --output=search_crn_gwecc_psrterm.out
 #SBATCH -p mamclaughlin
 #
 #SBATCH --ntasks=4
