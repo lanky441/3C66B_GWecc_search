@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#SBATCH --job-name=emp_dist
+#SBATCH --output=create_empirical_distribution.out
+#SBATCH -p mamclaughlin
+#
+#SBATCH --ntasks=1
+
+which python
+
+python create_empirical_distribution.py
+
+echo "Run complete."

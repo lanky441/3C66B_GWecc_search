@@ -88,5 +88,5 @@ J2302+4442_red_noise_gamma
 J2302+4442_red_noise_log10_A
 J2317+1439_red_noise_gamma
 J2317+1439_red_noise_log10_A
-gw_gamma
-gw_log10_A
+gwb_gamma
+gwb_log10_A

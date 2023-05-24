@@ -95,6 +95,8 @@ def get_ew_groups(pta, name='gwecc'):
 true_params = json.load(open(f"{datadir}/true_gwecc_params.dat", "r"))
 psrdist_info = json.load(open(f"{datadir}/pulsar_distances_12p5.json", "r"))
 
+empirical_distr = datadir + 'empirical_distributions.pkl'
+
 name = "gwecc"
 priors = {
     "tref": true_params["tref"],
@@ -248,8 +250,14 @@ sampler = ptmcmc(ndim, pta.get_lnlikelihood, get_lnprior, cov, groups=groups,
 
 
 if add_jumps:
-    jp = JP(pta)
-    sampler.addProposalToCycle(jp.draw_from_prior, 40)
+    jp = JP(pta, empirical_distr=empirical_distr)
+    
+#     if 'red noise' in jp.snames:
+#         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
+    if empirical_distr:
+        sampler.addProposalToCycle(jp.draw_from_empirical_distr, 20)
+    
+    sampler.addProposalToCycle(jp.draw_from_prior, 30)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
