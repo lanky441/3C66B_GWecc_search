@@ -23,7 +23,7 @@ for i in range(num_dists):
     gamma_bins = np.linspace(0, 7, 25)
     log10_A_bins = np.linspace(-20, -11, 25)
     
-    emp_dists.append(EmpiricalDistribution2D(param_names, samples, 
+    emp_dists.append(EmpiricalDistribution2D(param_names, samples.T, 
                                              bins=[gamma_bins, log10_A_bins]))
 
 with open('empirical_distributions.pkl', 'wb') as emp_dist_file:

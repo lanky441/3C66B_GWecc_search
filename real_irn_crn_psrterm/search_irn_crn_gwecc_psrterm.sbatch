@@ -1,14 +1,19 @@
 #!/bin/bash
 
-#SBATCH --job-name=real_gwecc_psrterm
-#SBATCH --output=search_irn_crn_gwecc_psrterm.out
-#SBATCH -p mamclaughlin
+#SBATCH --job-name=gwecc_psrterm_emp
+#SBATCH --output=search_irn_crn_gwecc_psrterm_empdist.out
+#SBATCH -p standby
 #
 #SBATCH --ntasks=4
 
-which python
+module load parallel/openmpi/3.1.6_gcc93
+export MPICC=`which mpicc`
 
-mpirun -np 4 python search_irn_crn_gwecc_psrterm.py -hc
-# python search_irn_crn_gwecc_psrterm.py -c chains_single
+which python
+which mpirun
+which mpicc
+
+mpirun -np 4 python search_irn_crn_gwecc_psrterm.py -hc -c chains_4_emp/
+#python search_irn_crn_gwecc_psrterm.py -c chains_single_emp
 
 echo "Run complete."
