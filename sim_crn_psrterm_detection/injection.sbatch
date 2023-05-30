@@ -5,7 +5,6 @@
 #SBATCH -p standby
 #
 #SBATCH --ntasks=1
-#SBATCH --mem=64G
 
 which python
 

@@ -1,26 +1,18 @@
-"""
-This code loads all the pulsars for which the par and time files are available in 
-a working directory into enterprise pulsar objects and append them to a list. Then
-it creates a PTA signal model with linearized timing model, fixed WN (efac only), 
-a common uncorrelated red noise for all pulsars, and a gwecc waveform. After that
-it constructs a ptmcmc sampler object to find the values of free parameters
-and runs the sampler.
-"""
-
 import numpy as np
 import json
 import corner
 import os
 import glob
+import argparse
 
 from matplotlib import pyplot as plt
 from enterprise import constants as const
 from enterprise.pulsar import Pulsar
-from enterprise.signals.parameter import Uniform, TruncNormal
+from enterprise.signals.parameter import Uniform
 from enterprise.signals.gp_signals import MarginalizingTimingModel
 from enterprise.signals.white_signals import MeasurementNoise
 from enterprise.signals.signal_base import PTA
-from enterprise_gwecc import gwecc_target_block
+from enterprise_gwecc import gwecc_target_block, PsrDistPrior, gwecc_target_prior
 
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from enterprise_extensions import blocks
@@ -31,13 +23,26 @@ from juliacall import Main as jl
 import juliacall
 
 
-workdir = "simulated_partim/"
+parser = argparse.ArgumentParser()
+parser.add_argument("-n", "--niter", default=1e6)
+parser.add_argument("-d", "--datadir", default="simulated_partim/")
+parser.add_argument("-c", "--chaindir", default="chains/")
+parser.add_argument("-hc", "--hotchains", action='store_true')
+
+args = parser.parse_args()
+
+datadir = args.datadir
+Niter = int(args.niter)
+chaindir = args.chaindir
+hotchains = args.hotchains
+
 add_jumps = True
-Niter = 1e6
-hotchains = True
 resume = True
-chaindir = "chains_fixedpdist/"
-x0_close_to_true_params = False
+
+psrlist = None
+# psrlist = ["J1909-3744", "J2317+1439", "J2043+1711", "J1600-3053", "J1918-0642", 
+#            "J0613-0200", "J1944+0907", "J1744-1134", "J1910+1256", "J0030+0451"]
+
 
 def get_ew_groups(pta, name='gwecc'):
     """Utility function to get parameter groups for CW sampling.
@@ -51,6 +56,8 @@ def get_ew_groups(pta, name='gwecc'):
 
     snames = np.unique([[qq.signal_name for qq in pp._signals] 
                         for pp in pta._signalcollections])
+    
+    print(f"snames = {snames}")
     
     if 'red noise' in snames:
 
@@ -74,34 +81,45 @@ def get_ew_groups(pta, name='gwecc'):
 
     if 'gwb_gamma' in params:
         groups.extend([[params.index('gwb_gamma'), params.index('gwb_log10_A')]])
+    
+    psrdist_params = [ p for p in params if 'psrdist' in p ]
+    lp_params = [ p for p in params if 'lp' in p ]
+    gammap_params = [ p for p in params if 'gammap' in p ]
+    
+    for pd, lp, gp in zip (psrdist_params, lp_params, gammap_params):
+        groups.extend([[params.index(pd), params.index(lp), params.index(gp), 
+                                params.index(f'{name}_log10_A')]])
         
     return groups
 
-true_params = json.load(open(f"{workdir}/true_gwecc_params.dat", "r"))
+target_params = json.load(open(f"{datadir}/true_gwecc_params.dat", "r"))
+psrdist_info = json.load(open(f"../data/pulsar_distances_12p5.json", "r"))
+
+empirical_distr = False # datadir + 'empirical_distributions.pkl'
 
 name = "gwecc"
 priors = {
-    "tref": true_params["tref"],
-    "cos_gwtheta": true_params["cos_gwtheta"],
-    "gwphi": true_params["gwphi"],
-    "gwdist": true_params["gwdist"],
+    "tref": target_params["tref"],
+    "cos_gwtheta": target_params["cos_gwtheta"],
+    "gwphi": target_params["gwphi"],
+    "gwdist": target_params["gwdist"],
     "psi": Uniform(0, np.pi)(f"{name}_psi"),
     "cos_inc": Uniform(-1, 1)(f"{name}_cos_inc"),
     "eta": Uniform(0.001, 0.25)(f"{name}_eta"),
-    "log10_F": true_params["log10_F"],
-    "e0": Uniform(0.001, 0.8)(f"{name}_e0"),
+    "log10_F": target_params["log10_F"],
+    "e0": Uniform(0.001, 0.9)(f"{name}_e0"),
     "gamma0": Uniform(0, np.pi)(f"{name}_gamma0"),
-    "gammap": 0,
+    "gammap": Uniform(0, np.pi),
     "l0": Uniform(0.0,2*np.pi)(f"{name}_l0"),
-    "lp": 0.0,
-    "log10_A": Uniform(-9, -5)(f"{name}_log10_A"),
-    "delta_pdist": 0.0,
+    "lp": Uniform(0.0,2*np.pi),
+    "log10_A": Uniform(-11, -5)(f"{name}_log10_A"),
+    "psrdist": PsrDistPrior(psrdist_info),
 }
 
-parfiles = sorted(glob.glob(workdir + '*.par'))
-timfiles = sorted(glob.glob(workdir + '*.tim'))
+parfiles = sorted(glob.glob(datadir + '/*.par'))
+timfiles = sorted(glob.glob(datadir + '/*.tim'))
 
-print(parfiles, timfiles)
+# print(parfiles, timfiles)
 
 psrs = []
 
@@ -122,10 +140,14 @@ print('Tspan = ', Tspan/const.yr, 'years')
 tm = MarginalizingTimingModel(use_svd=True)
 
 wn = MeasurementNoise(efac=1)
+# make WN signal (now with ECORR!)
+# wn_ec = blocks.white_noise_block(vary=False, inc_ecorr=True, select="backend", tnequad=True)
+
+# rn = blocks.red_noise_block(psd="powerlaw", components=30,Tspan=Tspan)
 
 crn = blocks.common_red_noise_block(prior='log-uniform', name='gwb', Tspan=Tspan)
 
-wf = gwecc_target_block(**priors, spline=True, psrTerm=True, tie_psrTerm=True, name='')
+wf = gwecc_target_block(**priors, spline=True, psrTerm=True, tie_psrTerm=False, name='')
 
 signal = tm + wn + crn + wf
 
@@ -136,11 +158,11 @@ for p in psrs:
 
 
 pta = PTA(models)
-print(pta.param_names)
-print(pta.summary())
+print(pta.params)
+# print(pta.summary())
 
 
-def gwecc_target_prior_my(pta, gwdist, log10_F, tref, tmax, name="gwecc"):
+def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
     def gwecc_target_prior_fn(params):
         param_map = pta.map_params(params)
         if jl.validate_params_target(
@@ -158,8 +180,8 @@ def gwecc_target_prior_my(pta, gwdist, log10_F, tref, tmax, name="gwecc"):
 
     return gwecc_target_prior_fn
 
-get_lnprior = gwecc_target_prior_my(pta, true_params["gwdist"], true_params["log10_F"],
-                                 true_params["tref"], tmax, name=name)
+get_lnprior = gwecc_target_prior_my(pta, target_params["gwdist"], target_params["tref"], tmax,
+                                    log10_F=target_params["log10_F"], name=name)
 
 
 def gwecc_target_likelihood_my(pta):
@@ -167,68 +189,73 @@ def gwecc_target_likelihood_my(pta):
         param_map = pta.map_params(params)
         try:
             lnlike = pta.get_lnlikelihood(param_map)
-        except juliacall.JuliaError:
-            print(juliacall.JuliaError)
+        except juliacall.JuliaError as err_julia:
+            print(err_julia)
             lnlike = -np.inf
         return lnlike
     return gwecc_target_likelihood_fn
 
 get_lnlikelihood = gwecc_target_likelihood_my(pta)
 
-comm_params = [x for x in pta.param_names if name in x]
-print(f'gwecc params = {comm_params}')
-n_cmnparams = len(comm_params)
-
-x_true = []
-#for psr in psrs:
-#    x_true.append(0)
-x_true.append(13/3.)
-x_true.append(np.log10(2.4e-15))
-
-ndim = len(pta.param_names)
-for i in range(ndim):
-    if i < ndim - n_cmnparams:
-        print('Already added.')
-    else:
-        x_true.append(true_params[pta.param_names[i][(len(name) + 1) :]])
-        # x_true.append(pta.params[i].sample())
-print(x_true)
-print("Log-likelihood at true params is", pta.get_lnlikelihood(x_true))
 
 
-if x0_close_to_true_params:
-    x0 = x_true
-    print("Log-likelihood at", x0, "is", pta.get_lnlikelihood(x0))
-else:
-    lnlike_x0 = -np.inf
-    while lnlike_x0 == -np.inf:
-        x0 = [p.sample() for p in pta.params]
-        lnlike_x0 = get_lnlikelihood(x0)
-        print("Log-likelihood at", x0, "is", get_lnlikelihood(x0))
-        print(f'lnprior(x0) = {get_lnprior(x0)}')
+# comm_params = [x for x in pta.param_names if name in x]
+# print(f'gwecc params = {comm_params}')
+# n_cmnparams = len(comm_params)
 
-        
+# x_true = []
+# ndim = len(pta.param_names)
+# for i in range(ndim):
+#     if i < ndim - n_cmnparams:
+#         x_true.append(noisedict[pta.param_names[i]])
+#     else:
+#         # x_true.append(target_params[pta.param_names[i][(len(name) + 1) :]])
+#         x_true.append(pta.params[i].sample())
+# print(x_true)
+# print("Log-likelihood at true params is", pta.get_lnlikelihood(x_true))
+
+
+lnprior_x0 = -np.inf
+while lnprior_x0 == -np.inf:
+    x0 = [p.sample() for p in pta.params]
+    lnprior_x0 = get_lnprior(x0)
+    print(f'lnprior(x0) = {get_lnprior(x0)}')
+print("Log-likelihood at", x0, "is", get_lnlikelihood(x0))
+
+
+
 groups = get_ew_groups(pta, name=name)
 print(f'groups = {groups}')
+
 
 ndim = len(x0)
 x0 = np.hstack(x0)
 
 cov = np.diag(np.ones(ndim) * 0.1**2)
 
-sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov,  groups=groups,
+sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov, groups=groups,
                  outDir=chaindir, resume=resume)
 
 
 if add_jumps:
-    jp = JP(pta)
+    jp = JP(pta, empirical_distr=empirical_distr)
+    
+#     if 'red noise' in jp.snames:
+#         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
+    if empirical_distr:
+        sampler.addProposalToCycle(jp.draw_from_empirical_distr, 20)
+    
     sampler.addProposalToCycle(jp.draw_from_prior, 30)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
     for ew in ew_params:
         sampler.addProposalToCycle(jp.draw_from_par_prior(ew),5)
-
+    
+    # draw from gwb priors
+    gwb_params = [x for x in pta.param_names if 'gwb' in x]
+    for para in gwb_params:
+        sampler.addProposalToCycle(jp.draw_from_par_prior(para),5)
 
 sampler.sample(x0, Niter, writeHotChains=hotchains)
 

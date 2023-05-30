@@ -64,6 +64,8 @@ print(f"Working with PSR {psrname}")
 parfile = f'{datadir}/partim/{psrname}_dmxset.par'
 timfile = f'{datadir}/partim/{psrname}_NANOGrav_12yv4.tim'
 
+psrdist_info = json.load(open(f"{datadir}/pulsar_distances_12p5.json", "r"))
+
 
 # loading libstempo pulsar object
 psr = lst.tempopulsar(parfile=parfile, timfile=timfile, maxobs=60000)
@@ -112,7 +114,7 @@ pos = SkyCoord(RA, DEC, frame='icrs')
 # mass, period, distance, and eccentricity of the source
 m1, m2 = (1.2e9, 7.0e8)
 P0 = (1.05 * u.year).to(u.s).value   #s
-dL = 93.1/10   #Mpc
+dL = 93.1/3   #Mpc
 ecc0 = 0.3
 
 m = m1 + m2
@@ -148,8 +150,10 @@ gwecc_params = {
     "tref": tref.mjd * day_to_s,
     "log10_A": log10_A,
     "gwdist": dL,
-    "delta_pdist": 0,
+    "psrdist": psrdist_info[psr.name][0],
 }
+
+print(f"psrdist for {psr.name} = {gwecc_params['psrdist']}")
 
 # storing the source parameters
 with open(f"{output_dir}/true_gwecc_params.dat", "w") as outfile:
@@ -165,7 +169,6 @@ def add_gwecc(psr, psr_ent, gwecc_params, psrTerm=include_psrterm):
                 toas=psr_ent.toas,
                 theta = psr_ent.theta,
                 phi = psr_ent.phi,
-                pdist = psr_ent.pdist,
                 psrTerm=psrTerm,
                 **gwecc_params,
             )
