@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=emp_dist
 #SBATCH --output=create_empirical_distribution.out
-#SBATCH -p mamclaughlin
+#SBATCH -p standby
 #
 #SBATCH --ntasks=1
 
