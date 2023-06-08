@@ -41,9 +41,9 @@ resume = True
 
 psrlist_exclude = ["J1713+0747", "J1946+3417", "J2322+2057"]
 
-# psrlist_include = None
-psrlist_include = ["J1909-3744", "J2317+1439", "J2043+1711", "J1600-3053", "J1918-0642", 
-           "J0613-0200", "J1944+0907", "J1744-1134", "J1910+1256", "J0030+0451"]
+psrlist_include = None
+# psrlist_include = ["J1909-3744", "J2317+1439", "J2043+1711", "J1600-3053", "J1918-0642", 
+#            "J0613-0200", "J1944+0907", "J1744-1134", "J1910+1256", "J0030+0451"]
 
 
 def get_ew_groups(pta, name='gwecc'):
@@ -157,9 +157,9 @@ rn = blocks.red_noise_block(psd="powerlaw", components=30, Tspan=Tspan)
 
 crn = blocks.common_red_noise_block(prior='log-uniform', Tspan=Tspan, components=5, name='gwb')
 
-wf = gwecc_target_block(**priors, spline=True, psrTerm=False, tie_psrTerm=False, name='')
+# wf = gwecc_target_block(**priors, spline=True, psrTerm=False, tie_psrTerm=False, name='')
 
-signal = tm + wn_ec + rn + crn + wf
+signal = tm + wn_ec + rn + crn #+ wf
 
 
 models = []
@@ -237,9 +237,9 @@ get_lnlikelihood = gwecc_target_likelihood_my(pta)
 lnprior_x0 = -np.inf
 while lnprior_x0 == -np.inf:
     x0 = [p.sample() for p in pta.params]
-    lnprior_x0 = get_lnprior(x0)
-    print(f'lnprior(x0) = {get_lnprior(x0)}')
-print("Log-likelihood at", x0, "is", get_lnlikelihood(x0))
+    lnprior_x0 = pta.get_lnprior(x0)
+    print(f'lnprior(x0) = {pta.get_lnprior(x0)}')
+print("Log-likelihood at", x0, "is", pta.get_lnlikelihood(x0))
 
 
 
@@ -252,7 +252,7 @@ x0 = np.hstack(x0)
 
 cov = np.diag(np.ones(ndim) * 0.1**2)
 
-sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov, groups=groups,
+sampler = ptmcmc(ndim, pta.get_lnlikelihood, pta.get_lnprior, cov, groups=groups,
                  outDir=chaindir, resume=resume)
 
 
@@ -261,8 +261,8 @@ if add_jumps:
     
 #     if 'red noise' in jp.snames:
 #         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
-    if empirical_distr:
-        sampler.addProposalToCycle(jp.draw_from_empirical_distr, 20)
+    if empirical_distr is not None:
+        sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
     
     sampler.addProposalToCycle(jp.draw_from_prior, 30)
 

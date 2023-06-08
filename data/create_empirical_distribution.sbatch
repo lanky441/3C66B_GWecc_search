@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=emp_dist
-#SBATCH --output=create_empirical_distribution.out
+#SBATCH --output=create_empirical_distribution_5f.out
 #SBATCH -p standby
 #
 #SBATCH --ntasks=1
