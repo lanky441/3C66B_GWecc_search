@@ -56,7 +56,6 @@ make_groups = setting["make_groups"]
 add_jumps = setting["add_jumps"]
 
 
-
 if tie or not psrterm:
     priors = {
         "tref": target_params["tref"],
@@ -70,7 +69,7 @@ if tie or not psrterm:
         "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
         "gamma0": parameter.Uniform(0, np.pi)(f"{name}_gamma0"),
         "gammap": 0,
-        "l0": parameter.Uniform(0.0,2*np.pi)(f"{name}_l0"),
+        "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
         "lp": 0,
         "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
         "psrdist": PsrDistPrior(psrdist_info),
@@ -88,24 +87,40 @@ else:
         "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
         "gamma0": parameter.Uniform(0, np.pi)(f"{name}_gamma0"),
         "gammap": parameter.Uniform(0.0, np.pi),
-        "l0": parameter.Uniform(0.0, 2*np.pi)(f"{name}_l0"),
-        "lp": parameter.Uniform(0.0, 2*np.pi),
+        "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
+        "lp": parameter.Uniform(0.0, 2 * np.pi),
         "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
         "psrdist": PsrDistPrior(psrdist_info),
     }
 
 
-parfiles = sorted(glob.glob(f'{datadir}par/*gls.par'))
-timfiles = sorted(glob.glob(f'{datadir}tim/*.tim'))
+parfiles = sorted(glob.glob(f"{datadir}par/*gls.par"))
+timfiles = sorted(glob.glob(f"{datadir}tim/*.tim"))
 
 if psrlist_exclude is not None:
-    parfiles = [x for x in parfiles if x.split('/')[-1].split('.')[0].split('_')[0] not in psrlist_exclude]
-    timfiles = [x for x in timfiles if x.split('/')[-1].split('.')[0].split('_')[0] not in psrlist_exclude]
+    parfiles = [
+        x
+        for x in parfiles
+        if x.split("/")[-1].split(".")[0].split("_")[0] not in psrlist_exclude
+    ]
+    timfiles = [
+        x
+        for x in timfiles
+        if x.split("/")[-1].split(".")[0].split("_")[0] not in psrlist_exclude
+    ]
 
 # whitelist supersedes blacklist.
-if psrlist_include !='all':
-    parfiles = [x for x in parfiles if x.split('/')[-1].split('.')[0].split('_')[0] in psrlist_include]
-    timfiles = [x for x in timfiles if x.split('/')[-1].split('.')[0].split('_')[0] in psrlist_include]
+if psrlist_include != "all":
+    parfiles = [
+        x
+        for x in parfiles
+        if x.split("/")[-1].split(".")[0].split("_")[0] in psrlist_include
+    ]
+    timfiles = [
+        x
+        for x in timfiles
+        if x.split("/")[-1].split(".")[0].split("_")[0] in psrlist_include
+    ]
 
 # print(parfiles, timfiles)
 
@@ -121,8 +136,8 @@ for psr in psrs:
     print(psr.name)
     psrlist.append(psr.name)
 
-np.savetxt(f'{chaindir}/psrlist.txt', np.array(psrlist), fmt='%s')
-    
+np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
+
 
 with open(nfile, "r") as f:
     noisedict = json.load(f)
@@ -132,8 +147,8 @@ with open(nfile, "r") as f:
 tmin = np.min([p.toas.min() for p in psrs])
 tmax = np.max([p.toas.max() for p in psrs])
 Tspan = tmax - tmin
-print('tmax = MJD ', np.max(tmax)/86400)
-print('Tspan = ', Tspan/const.yr, 'years')
+print("tmax = MJD ", np.max(tmax) / 86400)
+print("Tspan = ", Tspan / const.yr, "years")
 
 
 # define selection by observing backend
@@ -143,18 +158,18 @@ selection = selections.Selection(selections.by_backend)
 # white noise parameters
 efac = parameter.Constant()
 equad = parameter.Constant()
-ecorr = parameter.Constant() # we'll set these later with the params dictionary
+ecorr = parameter.Constant()  # we'll set these later with the params dictionary
 
 # red noise parameters
 log10_A = parameter.Uniform(-20, -11)
 gamma = parameter.Uniform(0, 7)
 
 # GW parameters (initialize with names here to use parameters in common across pulsars)
-log10_A_gw = parameter.Uniform(-20, -11)('gwb_log10_A')
+log10_A_gw = parameter.Uniform(-20, -11)("gwb_log10_A")
 if gamma_vary:
-    gamma_gw = parameter.Uniform(0, 8)('gwb_gamma')
+    gamma_gw = parameter.Uniform(0, 8)("gwb_gamma")
 else:
-    gamma_gw = parameter.Constant(13/3)('gwb_gamma')
+    gamma_gw = parameter.Constant(13 / 3)("gwb_gamma")
 
 
 # white noise
@@ -168,7 +183,7 @@ rn = gp_signals.FourierBasisGP(spectrum=pl, components=30, Tspan=Tspan)
 
 # gwb (no spatial correlations)
 cpl = utils.powerlaw(log10_A=log10_A_gw, gamma=gamma_gw)
-gw = gp_signals.FourierBasisGP(spectrum=cpl, components=5, Tspan=Tspan, name='gwb')
+gw = gp_signals.FourierBasisGP(spectrum=cpl, components=5, Tspan=Tspan, name="gwb")
 
 # for spatial correlations you can do...
 # spatial correlations are covered in the hypermodel context later
@@ -177,7 +192,7 @@ gw = gp_signals.FourierBasisGP(spectrum=cpl, components=5, Tspan=Tspan, name='gw
 #                                       components=30, Tspan=Tspan, name='gw')
 
 # to add solar system ephemeris modeling...
-bayesephem=False
+bayesephem = False
 if bayesephem:
     eph = deterministic_signals.PhysicalEphemerisSignal(use_epoch_toas=True)
 
@@ -185,7 +200,9 @@ if bayesephem:
 tm = gp_signals.TimingModel(use_svd=True)
 
 # eccentric signal
-wf = gwecc_target_block(**priors, spline=True, psrTerm=psrterm, tie_psrTerm=tie, name='')
+wf = gwecc_target_block(
+    **priors, spline=True, psrTerm=psrterm, tie_psrTerm=tie, name=""
+)
 
 s = (
     ef + eq + ec + rn + tm + eph + gw + wf
@@ -222,8 +239,15 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
 
     return gwecc_target_prior_fn
 
-get_lnprior = gwecc_target_prior_my(pta, target_params["gwdist"], target_params["tref"], tmax,
-                                    log10_F=target_params["log10_F"], name=name)
+
+get_lnprior = gwecc_target_prior_my(
+    pta,
+    target_params["gwdist"],
+    target_params["tref"],
+    tmax,
+    log10_F=target_params["log10_F"],
+    name=name,
+)
 
 # custom function to get lnlikelihood
 def gwecc_target_likelihood_my(pta):
@@ -235,7 +259,9 @@ def gwecc_target_likelihood_my(pta):
             print("Domain Error")
             lnlike = -np.inf
         return lnlike
+
     return gwecc_target_likelihood_fn
+
 
 get_lnlikelihood = gwecc_target_likelihood_my(pta)
 
@@ -262,7 +288,7 @@ print(f"lnprior(x0) = {get_lnprior(x0)}")
 print(f"lnlikelihood(x0) = {get_lnlikelihood(x0)}")
 
 groups = get_ew_groups(pta, name=name) if make_groups else None
-print(f'groups = {groups}')
+print(f"groups = {groups}")
 
 ndim = len(x0)
 
@@ -270,33 +296,42 @@ ndim = len(x0)
 # initial jump covariance matrix
 cov = np.diag(np.ones(ndim) * 0.01**2)
 
-sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov, groups=groups,
-                 outDir=chaindir, resume=resume)
+sampler = ptmcmc(
+    ndim,
+    get_lnlikelihood,
+    get_lnprior,
+    cov,
+    groups=groups,
+    outDir=chaindir,
+    resume=resume,
+)
 
 # write parameter names
-np.savetxt(f'{chaindir}/params.txt', list(map(str, pta.param_names)), fmt='%s')
+np.savetxt(f"{chaindir}/params.txt", list(map(str, pta.param_names)), fmt="%s")
 
 if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
 
-#     if 'red noise' in jp.snames:
-#         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
+    #     if 'red noise' in jp.snames:
+    #         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
     if empirical_distr:
         sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
 
-#     sampler.addProposalToCycle(jp.draw_from_prior, 30)
+    #     sampler.addProposalToCycle(jp.draw_from_prior, 30)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
     for ew in ew_params:
-        sampler.addProposalToCycle(jp.draw_from_par_prior(ew),5)
+        sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 5)
 
     # draw from gwb priors
-    gwb_params = [x for x in pta.param_names if 'gwb' in x]
+    gwb_params = [x for x in pta.param_names if "gwb" in x]
     for para in gwb_params:
-        sampler.addProposalToCycle(jp.draw_from_par_prior(para),5)
+        sampler.addProposalToCycle(jp.draw_from_par_prior(para), 5)
 
-sampler.sample(x0, Niter, SCAMweight=25, AMweight=40, DEweight=20, writeHotChains=hotchains)
+sampler.sample(
+    x0, Niter, SCAMweight=25, AMweight=40, DEweight=20, writeHotChains=hotchains
+)
 
 
 print("Sampler run completed successfully.")
