@@ -7,8 +7,8 @@ def get_ew_groups(pta, name='gwecc'):
     """
     params = pta.param_names
     ndim = len(params)
-    groups = [list(np.arange(0, ndim))]
-    #groups = []
+    # groups = [list(np.arange(0, ndim))]
+    groups = []
 
     snames = np.unique([[qq.signal_name for qq in pp._signals] 
                         for pp in pta._signalcollections])
