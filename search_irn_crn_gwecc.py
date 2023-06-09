@@ -177,7 +177,7 @@ gw = gp_signals.FourierBasisGP(spectrum=cpl, components=5, Tspan=Tspan, name="gw
 #                                       components=30, Tspan=Tspan, name='gw')
 
 # to add solar system ephemeris modeling...
-bayesephem = False
+bayesephem = setting["bayesephem"]
 if bayesephem:
     eph = deterministic_signals.PhysicalEphemerisSignal(use_epoch_toas=True)
 
@@ -250,8 +250,8 @@ def gwecc_target_likelihood_my(pta):
 
 get_lnlikelihood = gwecc_target_likelihood_my(pta)
 
-
-median_params = json.load(open(f"{datadir}/noise_param_median_5f.json", "r"))
+with open(f"{datadir}/noise_param_median_5f.json", "r") as npmf:
+    median_params = json.load(npmf)
 
 # set initial parameters from dict or drawn from prior
 x0 = []
