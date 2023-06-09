@@ -8,16 +8,18 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--chain_folder", default="all_chains/chains_earth/")
-parser.add_argument("-noise", "--plot_noise_params", action='store_true')
-parser.add_argument("-psrterm", "--psrterm", action='store_true')
+parser.add_argument("-nc", "--plot_noise_chains", action='store_true')
+parser.add_argument("-np", "--plot_noise_posterior", action='store_true')
+parser.add_argument("-psrdist", "--plot_psrdist_chains", action='store_true')
 parser.add_argument("-b", "--burn_fraction", default=4)
 
 
 args = parser.parse_args()
 chain_folder = args.chain_folder
-plot_noise_params = args.plot_noise_params
-psrterm = args.psrterm
-burn_frac = args.burn_fraction
+plot_noise_chains = args.plot_noise_chains
+plot_noise_posterior = args.plot_noise_posterior
+plot_psrdist_chains = args.plot_psrdist_chains
+burn_frac = int(args.burn_fraction)
 
 if os.path.isfile(f"{chain_folder}/chain_1.txt"):
     chain_file = f"{chain_folder}/chain_1.txt"
@@ -33,30 +35,57 @@ noise_params_med = json.load(open(f"data/noise_param_median_5f.json", "r"))
 npsr = len(psrlist)
 
 chain = np.loadtxt(chain_file)
-print(chain.shape)
+print(f"Chain shape = {chain.shape}")
 
 burn = chain.shape[0] //burn_frac
 
 
-if plot_noise_params:
+if plot_noise_chains:
     for psrnum, psr in enumerate(psrlist):
         pltnum = psrnum%16
         
         plt.subplot(8,4,2*pltnum+1)
-        plt.plot(chain[burn:, np.where(param_names == f"{psr}_red_noise_gamma")[0]], ls='', marker='.', alpha=0.1)
+        plt.plot(chain[burn:, np.where(param_names == f"{psr}_red_noise_gamma")[0]], ls='', color='C0', 
+                 marker='.', alpha=0.1, label=f"{psr}_gamma")
         plt.axhline(noise_params_med[f"{psr}_red_noise_gamma"], c="red")
-        plt.title(f"{psr}_gamma")
+        plt.legend(loc=3)
         if pltnum < 14 and psrnum < len(psrlist)-2: plt.xticks([]) 
         
         plt.subplot(8,4,2*pltnum+2)
-        plt.plot(chain[burn:, np.where(param_names == f"{psr}_red_noise_log10_A")[0]], ls='', marker='.', alpha=0.1)
+        plt.plot(chain[burn:, np.where(param_names == f"{psr}_red_noise_log10_A")[0]], ls='', color='C2', 
+                 marker='.', alpha=0.1, label=f"{psr}_log10_A")
         plt.axhline(noise_params_med[f"{psr}_red_noise_log10_A"], c="red")
-        plt.title(f"{psr}_log10_A")
+        plt.legend(loc=3)
         if pltnum < 14 and psrnum < len(psrlist)-2: plt.xticks([]) 
         
         if (psrnum+1)%16 == 0 or psrnum == len(psrlist)-1:
             plt.show()
-    
+
+if plot_noise_posterior:
+    # NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma.txt')
+    # print(f"NG12p5 chain shape = {chain.shape}")
+
+    # Reading the names of the parameters present in the chain
+    # NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
+
+    burn_NG12p5 = 30000
+
+    for psrnum, psr in enumerate(psrlist):
+        pltnum = psrnum%16
+        
+        plt.subplot(8,4,2*pltnum+1)
+        plt.hist(chain[burn:, np.where(param_names == f"{psr}_red_noise_gamma")[0]], bins=25, density=True, 
+                 color='C0', label=f"{psr}_gamma")
+        plt.legend(loc=2)
+        
+        plt.subplot(8,4,2*pltnum+2)
+        plt.hist(chain[burn:, np.where(param_names == f"{psr}_red_noise_log10_A")[0]], bins=25, density=True,
+                 color='C2', label=f"{psr}_log10_A")
+        plt.legend(loc=2)
+        
+        if (psrnum+1)%16 == 0 or psrnum == len(psrlist)-1:
+            plt.show()
+            
 
 gwb_ecw_params = [p for p in param_names  if 'gwb' in p or 'gwecc' in p]
 ndim = len(gwb_ecw_params)
