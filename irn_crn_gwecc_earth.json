@@ -1,6 +1,6 @@
 {
     "datadir": "data/",
-    "target_params": "data/3c66b_params.dat",
+    "target_params": "data/3c66b_params.json",
     "psrdist_info": "data/pulsar_distances_12p5.json",
     "empirical_distr": "data/empirical_distributions_5f.pkl",
     "noise_dict": "data/channelized_12p5yr_v3_full_noisedict.json",
@@ -20,3 +20,4 @@
     "make_groups": true,
     "add_jumps": true  
 }
+
