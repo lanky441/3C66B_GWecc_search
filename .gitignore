@@ -2,3 +2,5 @@
 *chain*
 *plot*
 *.out
+__pycache__
+*.DS_Store

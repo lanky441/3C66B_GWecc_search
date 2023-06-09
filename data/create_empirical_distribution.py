@@ -3,8 +3,11 @@ import pickle
 import json
 from enterprise_extensions.empirical_distr import EmpiricalDistribution2D
 
+# Reading chain from "Varying spectral index, 5 frequencies" run from NG 12.5 yr GWB analysis
 chain = np.genfromtxt('NG12p5_chain_5f_free_gamma.txt')
 print(f"Chain shape = {chain.shape}")
+
+# Reading the names of the parameters present in the chain
 params = np.genfromtxt('NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
 
 burn = 30000
@@ -12,10 +15,12 @@ burn = 30000
 emp_dists = []
 noise_median = {}
 
+# Calculating the medain values from the posterior distribution of each parameter
 for i, param in enumerate(params):
     median = np.median(chain[burn:,i])
     noise_median[param] = median
 
+# Writing the medain values of each parameter in a json file
 with open("noise_param_median_5f.json", "w") as outfile:
     json.dump(noise_median, outfile, indent=4)
 
@@ -33,8 +38,10 @@ for i in range(num_dists):
     gamma_bins = np.linspace(0, 7, 25)
     log10_A_bins = np.linspace(-20, -11, 25)
     
+    # Creating and appending the 2D empirical distributions for individaul pulsar RN and GWB parameters
     emp_dists.append(EmpiricalDistribution2D(param_names, samples.T, 
                                              bins=[gamma_bins, log10_A_bins]))
 
+# Dumping the list of empirical distributions in a pickle file
 with open('empirical_distributions_5f.pkl', 'wb') as emp_dist_file:
     pickle.dump(emp_dists, emp_dist_file)

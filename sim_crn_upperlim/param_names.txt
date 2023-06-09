@@ -1,9 +1,0 @@
-gwb_gamma
-gwb_log10A
-gwecc_cos_inc
-gwecc_e0
-gwecc_eta
-gwecc_gamma0
-gwecc_l0
-gwecc_log10_A
-gwecc_psi
