@@ -62,15 +62,15 @@ if tie or not psrterm:
         "cos_gwtheta": target_params["cos_gwtheta"],
         "gwphi": target_params["gwphi"],
         "gwdist": target_params["gwdist"],
-        "psi": parameter.Uniform(0, np.pi)(f"{name}_psi"),
+        "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
         "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
         "eta": parameter.Uniform(0.001, 0.25)(f"{name}_eta"),
         "log10_F": target_params["log10_F"],
         "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
-        "gamma0": parameter.Uniform(0, np.pi)(f"{name}_gamma0"),
-        "gammap": 0,
+        "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
+        "gammap": 0.0,
         "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
-        "lp": 0,
+        "lp": 0.0,
         "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
         "psrdist": PsrDistPrior(psrdist_info),
     }
@@ -80,12 +80,12 @@ else:
         "cos_gwtheta": target_params["cos_gwtheta"],
         "gwphi": target_params["gwphi"],
         "gwdist": target_params["gwdist"],
-        "psi": parameter.Uniform(0, np.pi)(f"{name}_psi"),
+        "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
         "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
         "eta": parameter.Uniform(0.001, 0.25)(f"{name}_eta"),
         "log10_F": target_params["log10_F"],
         "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
-        "gamma0": parameter.Uniform(0, np.pi)(f"{name}_gamma0"),
+        "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
         "gammap": parameter.Uniform(0.0, np.pi),
         "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
         "lp": parameter.Uniform(0.0, 2 * np.pi),
@@ -120,7 +120,7 @@ psrs = [Pulsar(par, tim, ephem=ephemeris) for par, tim in zip(parfiles, timfiles
 psrlist = [psr.name for psr in psrs]
 [print(pname) for pname in psrlist]
 
-np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
+
 
 
 with open(nfile, "r") as f:
@@ -259,6 +259,12 @@ if x0_median:
     for p in pta.param_names:
         if "gwecc" in p:
             x0.append(target_params[p])
+        elif "psrdist" in p:
+            x0.append(psrdist_info[p.split("_")[0]][0])
+        elif "gammap" in p:
+            x0.append(np.pi/2)
+        elif "lp" in p:
+            x0.append(np.pi)
         else:
             x0.append(median_params[p])
     x0 = np.hstack(x0)
@@ -293,6 +299,8 @@ sampler = ptmcmc(
 
 # write parameter names
 np.savetxt(f"{chaindir}/params.txt", list(map(str, pta.param_names)), fmt="%s")
+# write list of pulsars
+np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
 
 if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
