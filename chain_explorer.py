@@ -3,20 +3,21 @@ import matplotlib.pyplot as plt
 import corner
 import json
 import argparse
+import os
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--chain_folder", default="all_chains/chains/")
+parser.add_argument("-c", "--chain_file", default="all_chains/chains_earth/chain_1.txt")
 parser.add_argument("-noise", "--plot_noise_params", action='store_true')
 parser.add_argument("-psrterm", "--psrterm", action='store_true')
 
 
 args = parser.parse_args()
-chain_folder = args.chain_folder
+chain_file = args.chain_file
 plot_noise_params = args.plot_noise_params
 psrterm = args.psrterm
 
 
-chain_file = chain_folder + "/chain_1.txt"
+chain_folder = "/".join(chain_file.split("/")[:-1]) + "/"
 param_names = np.genfromtxt(f"{chain_folder}/params.txt", dtype=str)
 psrlist = np.genfromtxt(f"{chain_folder}/psrlist.txt", dtype=str)
 noise_params_med = json.load(open(f"data/noise_param_median_5f.json", "r"))
