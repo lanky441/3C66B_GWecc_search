@@ -281,6 +281,9 @@ ndim = len(x0)
 # initial jump covariance matrix
 cov = np.diag(np.ones(ndim) * 0.01**2)
 
+if not os.path.isdir(chaindir):
+    os.mkdir(chaindir)
+
 sampler = ptmcmc(
     ndim,
     get_lnlikelihood,
