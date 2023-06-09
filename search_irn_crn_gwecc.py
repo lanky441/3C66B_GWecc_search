@@ -121,8 +121,12 @@ for par, tim in zip(parfiles, timfiles):
     psr = Pulsar(par, tim, ephem=ephemeris)
     psrs.append(psr)
 
+psrlist = []
 for psr in psrs:
     print(psr.name)
+    psrlist.append(psr.name)
+    
+np.savetxt(chaindir + '/psrlist.txt', np.array(psrlist), fmt='%s')
     
 
 with open(nfile, "r") as f:
