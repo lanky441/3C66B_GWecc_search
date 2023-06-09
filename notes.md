@@ -32,6 +32,6 @@ A JSON file containing
 - chaindir (Directory to save the PTMCMC chains, str)
 - write_hotchain (Whether to write PTMCMC hot chains, bool)
 - resume (Whether to resume PTMCMC run, bool)
-- make_groups (??, bool)
-- add_jumps (??, bool)
+- make_groups (Whether to add parameter jump groups, bool)
+- add_jumps (Whether to add custom jumps to PTMCMC proposal cycle, bool)
   
