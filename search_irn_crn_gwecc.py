@@ -110,7 +110,7 @@ if psrlist_include !='all':
 # print(parfiles, timfiles)
 
 psrs = []
-ephemeris = 'DE438'
+ephemeris = setting["ephem"]
 
 for par, tim in zip(parfiles, timfiles):
     psr = Pulsar(par, tim, ephem=ephemeris)
