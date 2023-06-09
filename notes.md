@@ -22,7 +22,7 @@ A JSON file containing
 - empirical_distr (Empirical distributions file, pickle, str)
 - noise_dict (Noise dictionary file, JSON, str)
 - psr_exclude (Pulsar black list, list<str>)
-- psr_include (Pulsar white list; supersedes the black list, list<str>)
+- psr_include (Pulsar white list; supersedes the black list, list<str> or "all"; "all" -> include all pulsar except psr_exclude)
 - gamma_vary (Vary the GWB index, bool)
 - name (GWecc signal name, str)
 - psrterm (Whether to include pulsar term in GWecc signal, bool)
