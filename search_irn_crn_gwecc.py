@@ -98,43 +98,27 @@ parfiles = sorted(glob.glob(f"{datadir}par/*gls.par"))
 timfiles = sorted(glob.glob(f"{datadir}tim/*.tim"))
 
 if psrlist_exclude is not None:
-    parfiles = [
-        x
-        for x in parfiles
-        if x.split("/")[-1].split(".")[0].split("_")[0] not in psrlist_exclude
-    ]
-    timfiles = [
-        x
-        for x in timfiles
-        if x.split("/")[-1].split(".")[0].split("_")[0] not in psrlist_exclude
-    ]
+    is_excluded = (
+        lambda x: x.split("/")[-1].split(".")[0].split("_")[0] not in psrlist_exclude
+    )
+    parfiles = [x for x in parfiles if is_excluded(x)]
+    timfiles = [x for x in timfiles if is_excluded(x)]
 
 # whitelist supersedes blacklist.
 if psrlist_include != "all":
-    parfiles = [
-        x
-        for x in parfiles
-        if x.split("/")[-1].split(".")[0].split("_")[0] in psrlist_include
-    ]
-    timfiles = [
-        x
-        for x in timfiles
-        if x.split("/")[-1].split(".")[0].split("_")[0] in psrlist_include
-    ]
+    is_included = (
+        lambda x: x.split("/")[-1].split(".")[0].split("_")[0] in psrlist_include
+    )
+    parfiles = [x for x in parfiles if is_included(x)]
+    timfiles = [x for x in timfiles if is_included(x)]
 
 # print(parfiles, timfiles)
 
-psrs = []
 ephemeris = setting["ephem"]
 
-for par, tim in zip(parfiles, timfiles):
-    psr = Pulsar(par, tim, ephem=ephemeris)
-    psrs.append(psr)
-
-psrlist = []
-for psr in psrs:
-    print(psr.name)
-    psrlist.append(psr.name)
+psrs = [Pulsar(par, tim, ephem=ephemeris) for par, tim in zip(parfiles, timfiles)]
+psrlist = [psr.name for psr in psrs]
+[print(pname) for pname in psrlist]
 
 np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
 
@@ -166,10 +150,11 @@ gamma = parameter.Uniform(0, 7)
 
 # GW parameters (initialize with names here to use parameters in common across pulsars)
 log10_A_gw = parameter.Uniform(-20, -11)("gwb_log10_A")
-if gamma_vary:
-    gamma_gw = parameter.Uniform(0, 8)("gwb_gamma")
-else:
-    gamma_gw = parameter.Constant(13 / 3)("gwb_gamma")
+gamma_gw = (
+    parameter.Uniform(0, 8)("gwb_gamma")
+    if gamma_vary
+    else parameter.Constant(13 / 3)("gwb_gamma")
+)
 
 
 # white noise
