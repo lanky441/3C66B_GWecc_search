@@ -1,8 +1,10 @@
+print("Starting search script")
 import numpy as np
 import json
 import glob
 import argparse
 import os
+import shutil
 
 from enterprise import constants as const
 from enterprise.pulsar import Pulsar
@@ -28,7 +30,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--setting", default="irn_crn_gwecc_psrterm.json")
 
 args = parser.parse_args()
-setting = json.load(open(f"{args.setting}", "r"))
+setting_file = args.setting
+setting = json.load(open(f"{setting_file}", "r"))
 
 datadir = setting["datadir"]
 target_params = json.load(open(setting["target_params"], "r"))
@@ -93,6 +96,16 @@ else:
         "psrdist": PsrDistPrior(psrdist_info),
     }
 
+jobid = None 
+try:
+    jobid = os.environ["SLURM_JOBID"]
+except:
+    print("Not a slurm run!")
+             
+if jobid is not None:
+    print(f"jobid = {jobid}")
+    
+print(f"Chain directory = {chaindir}")
 
 parfiles = sorted(glob.glob(f"{datadir}par/*gls.par"))
 timfiles = sorted(glob.glob(f"{datadir}tim/*.tim"))
@@ -119,8 +132,6 @@ ephemeris = setting["ephem"]
 psrs = [Pulsar(par, tim, ephem=ephemeris) for par, tim in zip(parfiles, timfiles)]
 psrlist = [psr.name for psr in psrs]
 [print(pname) for pname in psrlist]
-
-
 
 
 with open(nfile, "r") as f:
@@ -299,9 +310,23 @@ sampler = ptmcmc(
 
 # write parameter names
 np.savetxt(f"{chaindir}/params.txt", list(map(str, pta.param_names)), fmt="%s")
+
 # write list of pulsars
 np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
 
+# save setting.json file
+shutil.copy(setting_file, f"{chaindir}/setting.json")
+
+# save groups file
+with open(f"{chaindir}/groups.txt", "w") as f:
+    f.write(str(groups))
+
+#save jobID
+if jobid is not None:
+    with open(f"{chaindir}/jobid.txt", "w") as f:
+        f.write(jobid)
+
+        
 if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
 
@@ -326,5 +351,8 @@ sampler.sample(
     x0, Niter, SCAMweight=25, AMweight=40, DEweight=20, writeHotChains=hotchains
 )
 
-
 print("Sampler run completed successfully.")
+
+
+if jobid is not None and os.path.isfile(f"slurm-{jobid}.out"):
+    shutil.move(f"slurm-{jobid}.out", f"{chaindir}/slurm-{jobid}.out")

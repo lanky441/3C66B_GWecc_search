@@ -13,9 +13,9 @@
     "psrterm": false,
     "tie_psrterm": false,
     "x0_median": true,
-    "Niter": 2e6,
+    "Niter": 1e6,
     "chaindir": "chains_earth/",
-    "write_hotchain": true,
+    "write_hotchain": false,
     "resume": true,
     "make_groups": true,
     "add_jumps": true  
