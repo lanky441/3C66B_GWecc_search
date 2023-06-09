@@ -4,27 +4,22 @@ import glob
 import argparse
 import os
 
-
-import enterprise
 from enterprise import constants as const
 from enterprise.pulsar import Pulsar
 import enterprise.signals.parameter as parameter
 from enterprise.signals import utils
-from enterprise.signals.gp_signals import MarginalizingTimingModel
 from enterprise.signals import white_signals
 from enterprise.signals import gp_signals
 from enterprise.signals import deterministic_signals
 from enterprise.signals import signal_base
 from enterprise.signals import selections
-from enterprise.signals.selections import Selection
 
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 
 from enterprise_extensions.sampler import JumpProposal as JP
-from enterprise_extensions.sampler import group_from_params
 from get_groups import get_ew_groups
 
-from enterprise_gwecc import gwecc_target_block, PsrDistPrior, gwecc_target_prior
+from enterprise_gwecc import gwecc_target_block, PsrDistPrior
 from juliacall import Main as jl
 import juliacall
 
@@ -80,8 +75,7 @@ if tie or not psrterm:
         "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
         "psrdist": PsrDistPrior(psrdist_info),
     }
-    
-if psrterm and not tie:
+else:
     priors = {
         "tref": target_params["tref"],
         "cos_gwtheta": target_params["cos_gwtheta"],
@@ -101,13 +95,14 @@ if psrterm and not tie:
     }
 
 
-parfiles = sorted(glob.glob(datadir + 'par/*gls.par'))
-timfiles = sorted(glob.glob(datadir + 'tim/*.tim'))
+parfiles = sorted(glob.glob(f'{datadir}par/*gls.par'))
+timfiles = sorted(glob.glob(f'{datadir}tim/*.tim'))
 
 if psrlist_exclude is not None:
     parfiles = [x for x in parfiles if x.split('/')[-1].split('.')[0].split('_')[0] not in psrlist_exclude]
     timfiles = [x for x in timfiles if x.split('/')[-1].split('.')[0].split('_')[0] not in psrlist_exclude]
-    
+
+# whitelist supersedes blacklist.
 if psrlist_include !='all':
     parfiles = [x for x in parfiles if x.split('/')[-1].split('.')[0].split('_')[0] in psrlist_include]
     timfiles = [x for x in timfiles if x.split('/')[-1].split('.')[0].split('_')[0] in psrlist_include]
@@ -125,8 +120,8 @@ psrlist = []
 for psr in psrs:
     print(psr.name)
     psrlist.append(psr.name)
-    
-np.savetxt(chaindir + '/psrlist.txt', np.array(psrlist), fmt='%s')
+
+np.savetxt(f'{chaindir}/psrlist.txt', np.array(psrlist), fmt='%s')
     
 
 with open(nfile, "r") as f:
@@ -146,8 +141,8 @@ selection = selections.Selection(selections.by_backend)
 
 
 # white noise parameters
-efac = parameter.Constant() 
-equad = parameter.Constant() 
+efac = parameter.Constant()
+equad = parameter.Constant()
 ecorr = parameter.Constant() # we'll set these later with the params dictionary
 
 # red noise parameters
@@ -159,7 +154,7 @@ log10_A_gw = parameter.Uniform(-20, -11)('gwb_log10_A')
 if gamma_vary:
     gamma_gw = parameter.Uniform(0, 8)('gwb_gamma')
 else:
-    gamma_gw = parameter.Constant(4.33)('gwb_gamma')
+    gamma_gw = parameter.Constant(13/3)('gwb_gamma')
 
 
 # white noise
@@ -192,25 +187,18 @@ tm = gp_signals.TimingModel(use_svd=True)
 # eccentric signal
 wf = gwecc_target_block(**priors, spline=True, psrTerm=psrterm, tie_psrTerm=tie, name='')
 
-# full model
-if bayesephem:
-    s = ef + eq + ec + rn + tm + eph + gw + wf
-else:
-    s = ef + eq + ec + rn + tm + gw + wf
-
-
-# intialize PTA
-models = []
-        
-for p in psrs:    
-    models.append(s(p))
-    
+s = (
+    ef + eq + ec + rn + tm + eph + gw + wf
+    if bayesephem
+    else ef + eq + ec + rn + tm + gw + wf
+)
+models = [s(p) for p in psrs]
 pta = signal_base.PTA(models)
 
 
 # set white noise parameters with dictionary
 pta.set_default_params(noisedict)
-    
+
 
 print(pta.params)
 # print(pta.summary())
@@ -273,10 +261,7 @@ print(f"x0 = {x0}")
 print(f"lnprior(x0) = {get_lnprior(x0)}")
 print(f"lnlikelihood(x0) = {get_lnlikelihood(x0)}")
 
-if make_groups:
-    groups = get_ew_groups(pta, name=name)
-else:
-    groups = None
+groups = get_ew_groups(pta, name=name) if make_groups else None
 print(f'groups = {groups}')
 
 ndim = len(x0)
@@ -289,23 +274,23 @@ sampler = ptmcmc(ndim, get_lnlikelihood, get_lnprior, cov, groups=groups,
                  outDir=chaindir, resume=resume)
 
 # write parameter names
-np.savetxt(chaindir + '/params.txt', list(map(str, pta.param_names)), fmt='%s')
+np.savetxt(f'{chaindir}/params.txt', list(map(str, pta.param_names)), fmt='%s')
 
 if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
-    
+
 #     if 'red noise' in jp.snames:
 #         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
     if empirical_distr:
         sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
-    
+
 #     sampler.addProposalToCycle(jp.draw_from_prior, 30)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
     for ew in ew_params:
         sampler.addProposalToCycle(jp.draw_from_par_prior(ew),5)
-    
+
     # draw from gwb priors
     gwb_params = [x for x in pta.param_names if 'gwb' in x]
     for para in gwb_params:
