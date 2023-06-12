@@ -10,7 +10,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--chain_folder", default="all_chains/chains_earth/")
 parser.add_argument("-nc", "--plot_noise_chains", action='store_true')
 parser.add_argument("-np", "--plot_noise_posterior", action='store_true')
-parser.add_argument("-psrdist", "--plot_psrdist_chains", action='store_true')
+parser.add_argument("-compare", "--compare", action='store_true')
+parser.add_argument("-pc", "--plot_psrdist_chains", action='store_true')
+parser.add_argument("-pp", "--plot_psrdist_posterior", action='store_true')
 parser.add_argument("-b", "--burn_fraction", default=4)
 
 
@@ -18,7 +20,9 @@ args = parser.parse_args()
 chain_folder = args.chain_folder
 plot_noise_chains = args.plot_noise_chains
 plot_noise_posterior = args.plot_noise_posterior
+comp_NG = args.compare
 plot_psrdist_chains = args.plot_psrdist_chains
+plot_psrdist_posterior = args.plot_psrdist_posterior
 burn_frac = int(args.burn_fraction)
 
 if os.path.isfile(f"{chain_folder}/chain_1.txt"):
@@ -62,31 +66,85 @@ if plot_noise_chains:
             plt.show()
 
 if plot_noise_posterior:
-    # NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma.txt')
-    # print(f"NG12p5 chain shape = {chain.shape}")
+    if comp_NG:
+        NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma.txt')
+        print(f"NG12p5 chain shape = {NG12p5chain.shape}")
 
-    # Reading the names of the parameters present in the chain
-    # NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
+        # Reading the names of the parameters present in the chain
+        NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
 
-    burn_NG12p5 = 30000
+        burn_NG12p5 = 30000
 
     for psrnum, psr in enumerate(psrlist):
         pltnum = psrnum%16
         
         plt.subplot(8,4,2*pltnum+1)
         plt.hist(chain[burn:, np.where(param_names == f"{psr}_red_noise_gamma")[0]], bins=25, density=True, 
-                 color='C0', label=f"{psr}_gamma")
+                 color='C0', label=f"{psr}_gamma", histtype='step')
+        if comp_NG:
+            plt.hist(NG12p5chain[burn_NG12p5:, np.where(NG12p5params == f"{psr}_red_noise_gamma")[0]], bins=25, density=True, 
+                 color='C1', label=f"NG", histtype='step')
         plt.legend(loc=2)
         
         plt.subplot(8,4,2*pltnum+2)
         plt.hist(chain[burn:, np.where(param_names == f"{psr}_red_noise_log10_A")[0]], bins=25, density=True,
-                 color='C2', label=f"{psr}_log10_A")
+                 color='C2', label=f"{psr}_log10_A", histtype='step')
+        if comp_NG:
+            plt.hist(NG12p5chain[burn_NG12p5:, np.where(NG12p5params == f"{psr}_red_noise_log10_A")[0]], bins=25, density=True, 
+                 color='C3', label=f"NG", histtype='step')
+        plt.legend(loc=2)
+        
+        if (psrnum+1)%16 == 0 or psrnum == len(psrlist)-1:
+            plt.show()
+
+if plot_psrdist_chains:
+    for psrnum, psr in enumerate(psrlist):
+        pltnum = psrnum%16
+        
+        plt.subplot(8,6,3*pltnum+1)
+        plt.plot(chain[burn:, np.where(param_names == f"{psr}_gammap")[0]], ls='', color='C0', 
+                 marker='.', alpha=0.1, label=f"{psr}_gammap")
+        plt.legend(loc=3)
+        if pltnum < 14 and psrnum < len(psrlist)-2: plt.xticks([]) 
+        
+        plt.subplot(8,6,3*pltnum+2)
+        plt.plot(chain[burn:, np.where(param_names == f"{psr}_lp")[0]], ls='', color='C2', 
+                 marker='.', alpha=0.1, label=f"{psr}_lp")
+        plt.legend(loc=3)
+        if pltnum < 14 and psrnum < len(psrlist)-2: plt.xticks([])
+            
+        plt.subplot(8,6,3*pltnum+3)
+        plt.plot(chain[burn:, np.where(param_names == f"{psr}_psrdist")[0]], ls='', color='C3', 
+                 marker='.', alpha=0.1, label=f"{psr}_psrdist")
+        plt.legend(loc=3)
+        if pltnum < 14 and psrnum < len(psrlist)-2: plt.xticks([])
+        
+        if (psrnum+1)%16 == 0 or psrnum == len(psrlist)-1:
+            plt.show()
+
+if plot_psrdist_posterior:
+    for psrnum, psr in enumerate(psrlist):
+        pltnum = psrnum%16
+        
+        plt.subplot(8,6,3*pltnum+1)
+        plt.hist(chain[burn:, np.where(param_names == f"{psr}_gammap")[0]], bins=25, density=True, 
+                 color='C0', label=f"{psr}_gammap")
+        plt.legend(loc=2)
+        
+        plt.subplot(8,6,3*pltnum+2)
+        plt.hist(chain[burn:, np.where(param_names == f"{psr}_lp")[0]], bins=25, density=True,
+                 color='C2', label=f"{psr}_lp")
+        plt.legend(loc=2)
+        
+        plt.subplot(8,6,3*pltnum+3)
+        plt.hist(chain[burn:, np.where(param_names == f"{psr}_psrdist")[0]], bins=25, density=True,
+                 color='C3', label=f"{psr}_psrdist")
         plt.legend(loc=2)
         
         if (psrnum+1)%16 == 0 or psrnum == len(psrlist)-1:
             plt.show()
             
-
+            
 gwb_ecw_params = [p for p in param_names  if 'gwb' in p or 'gwecc' in p]
 ndim = len(gwb_ecw_params)
 print(gwb_ecw_params)
