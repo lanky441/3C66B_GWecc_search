@@ -2,5 +2,6 @@
 *plot*
 *.out
 data/NG12p5_chain_5f_free_gamma.txt
+data/NG12p5_chain_5f_free_gamma_thinned.txt
 __pycache__
 *.DS_Store
