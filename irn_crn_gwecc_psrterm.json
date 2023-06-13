@@ -13,9 +13,9 @@
     "psrterm": true,
     "tie_psrterm": false,
     "x0_median": true,
-    "Niter": 2e6,
-    "chaindir": "chains_pulsar_psrjumps/",
-    "write_hotchain": false,
+    "Niter": 1e6,
+    "chaindir": "chains_pulsar_4/",
+    "write_hotchain": true,
     "resume": true,
     "make_groups": true,
     "add_jumps": true  
