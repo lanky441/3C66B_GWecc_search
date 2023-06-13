@@ -19,7 +19,7 @@ from enterprise.signals import selections
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 
 from enterprise_extensions.sampler import JumpProposal as JP
-from get_groups import get_ew_groups
+import get_groups_jumps #import get_ew_groups, draw_from_many_par_prior
 
 from enterprise_gwecc import gwecc_target_block, PsrDistPrior
 from juliacall import Main as jl
@@ -289,7 +289,7 @@ print(f"x0 = {x0}")
 print(f"lnprior(x0) = {get_lnprior(x0)}")
 print(f"lnlikelihood(x0) = {get_lnlikelihood(x0)}")
 
-groups = get_ew_groups(pta, name=name) if make_groups else None
+groups = get_groups_jumps.get_ew_groups(pta, name=name) if make_groups else None
 print(f"groups = {groups}")
 
 ndim = len(x0)
@@ -329,13 +329,14 @@ if jobid is not None:
         
 if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
+    jpLD = get_groups_jumps.JumpProposalLD(pta, empirical_distr=None)
 
     #     if 'red noise' in jp.snames:
     #         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
     if empirical_distr:
         sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
 
-    #     sampler.addProposalToCycle(jp.draw_from_prior, 30)
+    sampler.addProposalToCycle(jp.draw_from_prior, 10)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
@@ -344,11 +345,28 @@ if add_jumps:
 
     # draw from gwb priors
     gwb_params = [x for x in pta.param_names if "gwb" in x]
-    for para in gwb_params:
-        sampler.addProposalToCycle(jp.draw_from_par_prior(para), 5)
+    for param in gwb_params:
+        sampler.addProposalToCycle(jp.draw_from_par_prior(param), 5)
+        
+    # draw from psrdist, lp, gammap priors
+    # psr_params = [x for x in pta.param_names if any(y in x for y in ['psrdist', 'gammap', 'lp'])]
+    lp_params = [x for x in pta.param_names if 'lp' in x]
+    gammap_params = [x for x in pta.param_names if 'gammap' in x]
+    psrdist_params = [x for x in pta.param_names if 'psrdist' in x]
+    
+    print(f"lp params = {lp_params}, gammap_params = {gammap_params}, psrdist params = {psrdist_params}")
+    
+    if len(lp_params) !=0:
+        sampler.addProposalToCycle(jpLD.draw_from_many_par_prior(lp_params, 'lp'), 10)
+    
+    if len(gammap_params) !=0:
+        sampler.addProposalToCycle(jpLD.draw_from_many_par_prior(gammap_params, 'gammap'), 10)
+    
+    if len(psrdist_params) !=0:
+        sampler.addProposalToCycle(jpLD.draw_from_many_par_prior(psrdist_params, 'psrdist'), 10)
 
 sampler.sample(
-    x0, Niter, SCAMweight=25, AMweight=40, DEweight=20, writeHotChains=hotchains
+    x0, Niter, SCAMweight=25, AMweight=30, DEweight=10, writeHotChains=hotchains
 )
 
 print("Sampler run completed successfully.")
