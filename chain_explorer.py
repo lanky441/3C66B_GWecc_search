@@ -10,17 +10,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--chain_folder", default="all_chains/chains_earth/")
 parser.add_argument("-nc", "--plot_noise_chains", action='store_true')
 parser.add_argument("-np", "--plot_noise_posterior", action='store_true')
-parser.add_argument("-compare", "--compare", action='store_true')
+parser.add_argument("-compare", "--compare_irn_with_NG12p5", action='store_true')
 parser.add_argument("-pc", "--plot_psrdist_chains", action='store_true')
 parser.add_argument("-pp", "--plot_psrdist_posterior", action='store_true')
-parser.add_argument("-b", "--burn_fraction", default=4)
+parser.add_argument("-b", "--burn_fraction", default=0.25)
 
 
 args = parser.parse_args()
 chain_folder = args.chain_folder
 plot_noise_chains = args.plot_noise_chains
 plot_noise_posterior = args.plot_noise_posterior
-comp_NG = args.compare
+comp_NG = args.compare_irn_with_NG12p5
 plot_psrdist_chains = args.plot_psrdist_chains
 plot_psrdist_posterior = args.plot_psrdist_posterior
 burn_frac = int(args.burn_fraction)
@@ -41,8 +41,14 @@ npsr = len(psrlist)
 chain = np.loadtxt(chain_file)
 print(f"Chain shape = {chain.shape}")
 
-burn = chain.shape[0] //burn_frac
+burn = int(chain.shape[0] * burn_frac)
 
+if comp_NG:
+        NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_thinned.txt')
+        print(f"NG12p5 chain shape = {NG12p5chain.shape}")
+
+        # Reading the names of the parameters present in the chain
+        NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
 
 if plot_noise_chains:
     for psrnum, psr in enumerate(psrlist):
@@ -66,15 +72,6 @@ if plot_noise_chains:
             plt.show()
 
 if plot_noise_posterior:
-    if comp_NG:
-        NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma.txt')
-        print(f"NG12p5 chain shape = {NG12p5chain.shape}")
-
-        # Reading the names of the parameters present in the chain
-        NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
-
-        burn_NG12p5 = 30000
-
     for psrnum, psr in enumerate(psrlist):
         pltnum = psrnum%16
         
@@ -82,7 +79,7 @@ if plot_noise_posterior:
         plt.hist(chain[burn:, np.where(param_names == f"{psr}_red_noise_gamma")[0]], bins=25, density=True, 
                  color='C0', label=f"{psr}_gamma", histtype='step')
         if comp_NG:
-            plt.hist(NG12p5chain[burn_NG12p5:, np.where(NG12p5params == f"{psr}_red_noise_gamma")[0]], bins=25, density=True, 
+            plt.hist(NG12p5chain[:, np.where(NG12p5params == f"{psr}_red_noise_gamma")[0]], bins=25, density=True, 
                  color='C1', label=f"NG", histtype='step')
         plt.legend(loc=2)
         
@@ -90,7 +87,7 @@ if plot_noise_posterior:
         plt.hist(chain[burn:, np.where(param_names == f"{psr}_red_noise_log10_A")[0]], bins=25, density=True,
                  color='C2', label=f"{psr}_log10_A", histtype='step')
         if comp_NG:
-            plt.hist(NG12p5chain[burn_NG12p5:, np.where(NG12p5params == f"{psr}_red_noise_log10_A")[0]], bins=25, density=True, 
+            plt.hist(NG12p5chain[:, np.where(NG12p5params == f"{psr}_red_noise_log10_A")[0]], bins=25, density=True, 
                  color='C3', label=f"NG", histtype='step')
         plt.legend(loc=2)
         
@@ -161,6 +158,18 @@ for i, param in enumerate(gwb_ecw_params):
     plt.ylabel("_".join(param.split("_")[1:]))
 plt.show()
 
+if "gwb_gamma" in param_names:
+    gwb_gamma_idx = np.where(param_names == "gwb_gamma")[0][0]
+    print(gwb_gamma_idx)
+
+figure = corner.corner(chain[burn:, gwb_gamma_idx:gwb_gamma_idx+2], labels=["gwb_gamma", "gwb_log10_A"],
+                       color='C0', hist_kwargs={"density":True})
+if comp_NG:
+    gwb_gamma_NG_idx = np.where(NG12p5params == "gwb_gamma")[0][0]
+    print(gwb_gamma_NG_idx)
+    corner.corner(NG12p5chain[:, gwb_gamma_NG_idx:gwb_gamma_NG_idx+2], fig=figure, 
+                  labels=["gwb_gamma", "gwb_log10_A"], color='C1', hist_kwargs={"density":True})
+plt.show()
 
 plt.plot(chain[burn:, -3])
 plt.ylabel('log_likelihood')
