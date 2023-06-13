@@ -7,10 +7,15 @@ from enterprise_extensions.empirical_distr import EmpiricalDistribution2D
 chain = np.genfromtxt('NG12p5_chain_5f_free_gamma.txt')
 print(f"Chain shape = {chain.shape}")
 
+burn = 30000
+
+# Thinning the chain by a factor of 10 and saving it
+chain_thinned = chain[burn::10,:]
+print(f"Thinned chain shape = {chain_thinned.shape}")
+np.savetxt("NG12p5_chain_5f_free_gamma_thinned.txt", chain_thinned)
+
 # Reading the names of the parameters present in the chain
 params = np.genfromtxt('NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
-
-burn = 30000
 
 emp_dists = []
 noise_median = {}
