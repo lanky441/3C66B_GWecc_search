@@ -23,7 +23,7 @@ plot_noise_posterior = args.plot_noise_posterior
 comp_NG = args.compare_irn_with_NG12p5
 plot_psrdist_chains = args.plot_psrdist_chains
 plot_psrdist_posterior = args.plot_psrdist_posterior
-burn_frac = int(args.burn_fraction)
+burn_frac = float(args.burn_fraction)
 
 if os.path.isfile(f"{chain_folder}/chain_1.txt"):
     chain_file = f"{chain_folder}/chain_1.txt"
@@ -154,7 +154,7 @@ plt.show()
 
 for i, param in enumerate(gwb_ecw_params):
     plt.subplot(ndim, 1, i + 1)
-    plt.plot(chain[burn:, np.where(param_names == param)[0]], ls='', marker='.', alpha=0.1)
+    plt.plot(chain[burn:, np.where(param_names == param)[0]], ls='-', marker=None, alpha=1.0)
     plt.ylabel("_".join(param.split("_")[1:]))
 plt.show()
 
@@ -173,13 +173,13 @@ plt.show()
 
 plt.plot(chain[burn:, -3])
 plt.ylabel('log_likelihood')
-plt.title(f'last log_likelihood = {chain[-1, -3]}')
+# plt.title(f'last log_likelihood = {chain[-1, -3]}')
 plt.show()
 
-# # for i in range(npsr):
-# #     corner.corner(chain[burn:, psr_params*i:psr_params*(i+1)])
-# #     plt.show()
+e_idx = np.where(param_names == "gwecc_e0")[0][0]
+A_idx = np.where(param_names == "gwecc_log10_A")[0][0]
+corner.corner(chain[burn:, [e_idx,A_idx]], labels=["e0", "log10_A"])
+plt.show()
 
 corner.corner(chain[burn:,-ndim-4:-4], labels=["_".join(p.split("_")[1:]) for p in gwb_ecw_params])
-# # plt.savefig("gwecc_sims/plots/corner.pdf")
 plt.show()
