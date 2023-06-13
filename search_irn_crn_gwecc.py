@@ -216,21 +216,36 @@ pta.set_default_params(noisedict)
 print(pta.params)
 # print(pta.summary())
 
+write_invalid_params = False
+
 # custom function to get lnprior
 def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
     def gwecc_target_prior_fn(params):
         param_map = pta.map_params(params)
-        if jl.validate_params_target(
-            param_map[f"{name}_log10_A"],
-            param_map[f"{name}_eta"],
+        
+        log10_A = param_map[f"{name}_log10_A"]
+        eta = param_map[f"{name}_eta"]
+        e0 = param_map[f"{name}_e0"]
+        
+        pta_prior = pta.get_lnprior(param_map)
+        
+        if pta_prior == -np.inf:
+            return pta_prior
+        elif jl.validate_params_target(
+            log10_A,
+            eta,
             log10_F,
-            param_map[f"{name}_e0"],
+            e0,
             gwdist,
             tref,
             tmax,
         ):
-            return pta.get_lnprior(param_map)
+            return pta_prior
         else:
+            # print("Invalid param space")
+            if write_invalid_params:
+                with open(f"{chaindir}/invalid_params.txt", "a") as nvp:
+                    nvp.write(f"{log10_A}    {eta}   {e0}" + "\n")
             return -np.inf
 
     return gwecc_target_prior_fn
@@ -331,8 +346,8 @@ if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
     jpLD = get_groups_jumps.JumpProposalLD(pta, empirical_distr=None)
 
-    #     if 'red noise' in jp.snames:
-    #         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
+#     if 'red noise' in jp.snames:
+#         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
     if empirical_distr:
         sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
 
@@ -346,7 +361,7 @@ if add_jumps:
     # draw from gwb priors
     gwb_params = [x for x in pta.param_names if "gwb" in x]
     for param in gwb_params:
-        sampler.addProposalToCycle(jp.draw_from_par_prior(param), 5)
+        sampler.addProposalToCycle(jp.draw_from_par_prior(param), 2)
         
     # draw from psrdist, lp, gammap priors
     # psr_params = [x for x in pta.param_names if any(y in x for y in ['psrdist', 'gammap', 'lp'])]
@@ -365,8 +380,10 @@ if add_jumps:
     if len(psrdist_params) !=0:
         sampler.addProposalToCycle(jpLD.draw_from_many_par_prior(psrdist_params, 'psrdist'), 10)
 
+write_invalid_params = True
+        
 sampler.sample(
-    x0, Niter, SCAMweight=25, AMweight=30, DEweight=10, writeHotChains=hotchains
+    x0, Niter, SCAMweight=25, AMweight=30, DEweight=20, writeHotChains=hotchains
 )
 
 print("Sampler run completed successfully.")
