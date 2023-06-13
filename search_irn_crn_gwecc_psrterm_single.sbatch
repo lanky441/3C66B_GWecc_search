@@ -9,6 +9,6 @@
 which python
 bash print_info.sh
 
-python search_irn_crn_gwecc.py -s irn_crn_gwecc_psrterm.json
+python search_irn_crn_gwecc.py -s irn_crn_gwecc_psrterm_J1909.json
 
 echo "Run complete."
