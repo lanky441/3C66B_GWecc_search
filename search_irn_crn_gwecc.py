@@ -162,7 +162,7 @@ gamma = parameter.Uniform(0, 7)
 # GW parameters (initialize with names here to use parameters in common across pulsars)
 log10_A_gw = parameter.Uniform(-20, -11)("gwb_log10_A")
 gamma_gw = (
-    parameter.Uniform(0, 8)("gwb_gamma")
+    parameter.Uniform(0, 7)("gwb_gamma")
     if gamma_vary
     else parameter.Constant(13 / 3)("gwb_gamma")
 )
@@ -242,7 +242,7 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
         ):
             return pta_prior
         else:
-            # print("Invalid param space")
+            # print("Invalid param space.")
             if write_invalid_params:
                 with open(f"{chaindir}/invalid_params.txt", "a") as nvp:
                     nvp.write(f"{log10_A}    {eta}   {e0}" + "\n")
@@ -279,7 +279,7 @@ get_lnlikelihood = gwecc_target_likelihood_my(pta)
 with open(f"{datadir}/noise_param_median_5f.json", "r") as npmf:
     median_params = json.load(npmf)
 
-# set initial parameters from dict or drawn from prior
+# set initial parameters from dict or draw from prior
 x0 = []
 if x0_median:
     for p in pta.param_names:
@@ -346,17 +346,18 @@ if add_jumps:
     jp = JP(pta, empirical_distr=empirical_distr)
     jpLD = get_groups_jumps.JumpProposalLD(pta, empirical_distr=None)
 
-#     if 'red noise' in jp.snames:
-#         sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
+    # if 'red noise' in jp.snames:
+    #     sampler.addProposalToCycle(jp.draw_from_red_prior, 20)
     if empirical_distr:
         sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
 
-    sampler.addProposalToCycle(jp.draw_from_prior, 10)
+    # sampler.addProposalToCycle(jp.draw_from_prior, 10)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
     for ew in ew_params:
-        sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 5)
+        if "log10_A" not in ew:
+            sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 5)
 
     # draw from gwb priors
     gwb_params = [x for x in pta.param_names if "gwb" in x]
