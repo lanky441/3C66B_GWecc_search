@@ -15,6 +15,7 @@ parser.add_argument("-pc", "--plot_psrdist_chains", action='store_true')
 parser.add_argument("-pp", "--plot_psrdist_posterior", action='store_true')
 parser.add_argument("-gwb", "--plot_gwb_params", action='store_true')
 parser.add_argument("-3p", "--plot_A_e_eta", action='store_true')
+parser.add_argument("-ip", "--plot_invalid_param", action='store_true')
 parser.add_argument("-b", "--burn_fraction", default=0.25)
 
 
@@ -27,6 +28,7 @@ plot_psrdist_chains = args.plot_psrdist_chains
 plot_psrdist_posterior = args.plot_psrdist_posterior
 plot_gwb_params = args.plot_gwb_params
 plot_A_e_eta = args.plot_A_e_eta
+plot_invalid_param = args.plot_invalid_param
 burn_frac = float(args.burn_fraction)
 
 
@@ -183,8 +185,16 @@ if plot_A_e_eta:
     e_idx = np.where(param_names == "gwecc_e0")[0][0]
     eta_idx = np.where(param_names == "gwecc_eta")[0][0]
     A_idx = np.where(param_names == "gwecc_log10_A")[0][0]
-    corner.corner(chain[burn:, [e_idx, eta_idx, A_idx]], labels=["e0", "eta", "log10_A"])
+    figure2 = corner.corner(chain[burn:, [e_idx, eta_idx, A_idx]], labels=["e0", "eta", "log10_A"],
+                           color='C0', hist_kwargs={"density":True})
+    
+    if plot_invalid_param:
+        invalid_params = np.genfromtxt(f"{chain_folder}/invalid_params.txt")
+        corner.corner(invalid_params[:, [2, 1, 0]], fig=figure2, 
+                     color='C1', hist_kwargs={"density":True})
+    
     plt.show()
+    
 
 corner.corner(chain[burn:,-ndim-4:-4], labels=["_".join(p.split("_")[1:]) for p in gwb_ecw_params])
 plt.show()
