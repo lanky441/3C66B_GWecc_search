@@ -218,3 +218,18 @@ class JumpProposalLD(object):
         name_string = string_name
         draw.__name__ = 'draw_from_{}_prior'.format(name_string)
         return draw
+    
+    def gwecc_log10_A_low_jump(self, x, iter, beta):
+        ##written by SJV for 11yr CW
+        q = x.copy()
+        lqxy = 0
+
+        param_name = "gwecc_log10_A"
+        idx = self.pnames.index(param_name)
+        
+        if x[idx] > -8:
+            q[idx] = x[idx] - 2
+        else:
+            q[idx] = self.params[idx].sample()
+                
+        return q, float(lqxy)

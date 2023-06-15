@@ -74,7 +74,7 @@ if tie or not psrterm:
         "gammap": 0.0,
         "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
         "lp": 0.0,
-        "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
+        "log10_A": parameter.Uniform(-12, -6)(f"{name}_log10_A"),
         "psrdist": PsrDistPrior(psrdist_info),
     }
 else:
@@ -92,7 +92,7 @@ else:
         "gammap": parameter.Uniform(0.0, np.pi),
         "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
         "lp": parameter.Uniform(0.0, 2 * np.pi),
-        "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
+        "log10_A": parameter.Uniform(-12, -6)(f"{name}_log10_A"),
         "psrdist": PsrDistPrior(psrdist_info),
     }
 
@@ -267,7 +267,7 @@ def gwecc_target_likelihood_my(pta):
         try:
             lnlike = pta.get_lnlikelihood(param_map)
         except juliacall.JuliaError as err_julia:
-            print("Domain Error")
+            print(err_julia.args[0])
             lnlike = -np.inf
         return lnlike
 
@@ -351,12 +351,15 @@ if add_jumps:
     if empirical_distr:
         sampler.addProposalToCycle(jp.draw_from_empirical_distr, 30)
 
-    # sampler.addProposalToCycle(jp.draw_from_prior, 10)
+    sampler.addProposalToCycle(jp.draw_from_prior, 10)
 
     # draw from ewf priors
     ew_params = [x for x in pta.param_names if name in x]
     for ew in ew_params:
-        if "log10_A" not in ew:
+        if "log10_A" in ew:
+            sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 10)
+            sampler.addProposalToCycle(jpLD.gwecc_log10_A_low_jump, 5)
+        else:
             sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 5)
 
     # draw from gwb priors
@@ -384,7 +387,7 @@ if add_jumps:
 write_invalid_params = True
         
 sampler.sample(
-    x0, Niter, SCAMweight=25, AMweight=30, DEweight=20, writeHotChains=hotchains
+    x0, Niter, SCAMweight=20, AMweight=20, DEweight=20, writeHotChains=hotchains
 )
 
 print("Sampler run completed successfully.")
