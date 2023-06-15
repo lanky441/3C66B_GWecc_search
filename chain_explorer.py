@@ -13,6 +13,8 @@ parser.add_argument("-np", "--plot_noise_posterior", action='store_true')
 parser.add_argument("-compare", "--compare_irn_with_NG12p5", action='store_true')
 parser.add_argument("-pc", "--plot_psrdist_chains", action='store_true')
 parser.add_argument("-pp", "--plot_psrdist_posterior", action='store_true')
+parser.add_argument("-gwb", "--plot_gwb_params", action='store_true')
+parser.add_argument("-3p", "--plot_A_e_eta", action='store_true')
 parser.add_argument("-b", "--burn_fraction", default=0.25)
 
 
@@ -23,7 +25,10 @@ plot_noise_posterior = args.plot_noise_posterior
 comp_NG = args.compare_irn_with_NG12p5
 plot_psrdist_chains = args.plot_psrdist_chains
 plot_psrdist_posterior = args.plot_psrdist_posterior
+plot_gwb_params = args.plot_gwb_params
+plot_A_e_eta = args.plot_A_e_eta
 burn_frac = float(args.burn_fraction)
+
 
 if os.path.isfile(f"{chain_folder}/chain_1.txt"):
     chain_file = f"{chain_folder}/chain_1.txt"
@@ -144,7 +149,7 @@ if plot_psrdist_posterior:
             
 gwb_ecw_params = [p for p in param_names  if 'gwb' in p or 'gwecc' in p]
 ndim = len(gwb_ecw_params)
-print(gwb_ecw_params)
+print(f"Common parameters = {gwb_ecw_params}")
 
 for i, param in enumerate(gwb_ecw_params):
     plt.subplot(ndim, 1, i + 1)
@@ -158,28 +163,28 @@ for i, param in enumerate(gwb_ecw_params):
     plt.ylabel("_".join(param.split("_")[1:]))
 plt.show()
 
-if "gwb_gamma" in param_names:
+if plot_gwb_params:
     gwb_gamma_idx = np.where(param_names == "gwb_gamma")[0][0]
-    print(gwb_gamma_idx)
 
-figure = corner.corner(chain[burn:, gwb_gamma_idx:gwb_gamma_idx+2], labels=["gwb_gamma", "gwb_log10_A"],
-                       color='C0', hist_kwargs={"density":True})
-if comp_NG:
-    gwb_gamma_NG_idx = np.where(NG12p5params == "gwb_gamma")[0][0]
-    print(gwb_gamma_NG_idx)
-    corner.corner(NG12p5chain[:, gwb_gamma_NG_idx:gwb_gamma_NG_idx+2], fig=figure, 
-                  labels=["gwb_gamma", "gwb_log10_A"], color='C1', hist_kwargs={"density":True})
-plt.show()
+    figure = corner.corner(chain[burn:, gwb_gamma_idx:gwb_gamma_idx+2], labels=["gwb_gamma", "gwb_log10_A"],
+                           color='C0', hist_kwargs={"density":True})
+    if comp_NG:
+        gwb_gamma_NG_idx = np.where(NG12p5params == "gwb_gamma")[0][0]
+        corner.corner(NG12p5chain[:, gwb_gamma_NG_idx:gwb_gamma_NG_idx+2], fig=figure, 
+                      labels=["gwb_gamma", "gwb_log10_A"], color='C1', hist_kwargs={"density":True})
+    plt.show()
 
 plt.plot(chain[burn:, -3])
 plt.ylabel('log_likelihood')
 # plt.title(f'last log_likelihood = {chain[-1, -3]}')
 plt.show()
 
-e_idx = np.where(param_names == "gwecc_e0")[0][0]
-A_idx = np.where(param_names == "gwecc_log10_A")[0][0]
-corner.corner(chain[burn:, [e_idx,A_idx]], labels=["e0", "log10_A"])
-plt.show()
+if plot_A_e_eta:
+    e_idx = np.where(param_names == "gwecc_e0")[0][0]
+    eta_idx = np.where(param_names == "gwecc_eta")[0][0]
+    A_idx = np.where(param_names == "gwecc_log10_A")[0][0]
+    corner.corner(chain[burn:, [e_idx, eta_idx, A_idx]], labels=["e0", "eta", "log10_A"])
+    plt.show()
 
 corner.corner(chain[burn:,-ndim-4:-4], labels=["_".join(p.split("_")[1:]) for p in gwb_ecw_params])
 plt.show()
