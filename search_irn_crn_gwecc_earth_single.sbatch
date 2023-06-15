@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=earth_all_psr
+#SBATCH --job-name=earth_1
 
 #SBATCH -p mamclaughlin
 #SBATCH --mem=64G
