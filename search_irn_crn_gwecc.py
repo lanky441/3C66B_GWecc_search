@@ -358,7 +358,6 @@ if add_jumps:
     for ew in ew_params:
         if "log10_A" in ew:
             sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 10)
-            sampler.addProposalToCycle(jpLD.gwecc_log10_A_low_jump, 5)
         else:
             sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 5)
 
