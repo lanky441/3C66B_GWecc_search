@@ -45,7 +45,7 @@ psrlist_include = setting["psr_include"]
 gamma_vary = setting["gamma_vary"]
 name = setting["name"]
 emax = setting["emax"]
-etamin = setting["etamin"]
+eta = setting["etamin"]
 psrterm = setting["psrterm"]
 tie = setting["tie_psrterm"]
 
@@ -69,7 +69,7 @@ if tie or not psrterm:
         "gwdist": target_params["gwdist"],
         "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
         "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
-        "eta": parameter.Uniform(etamin, 0.25)(f"{name}_eta"),
+        "eta": eta,
         "log10_F": target_params["log10_F"],
         "e0": parameter.Uniform(0.001, emax)(f"{name}_e0"),
         "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
@@ -87,7 +87,7 @@ else:
         "gwdist": target_params["gwdist"],
         "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
         "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
-        "eta": parameter.Uniform(etamin, 0.25)(f"{name}_eta"),
+        "eta": eta,
         "log10_F": target_params["log10_F"],
         "e0": parameter.Uniform(0.001, emax)(f"{name}_e0"),
         "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
@@ -221,12 +221,11 @@ print(pta.params)
 write_invalid_params = False
 
 # custom function to get lnprior
-def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
+def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, eta, name="gwecc"):
     def gwecc_target_prior_fn(params):
         param_map = pta.map_params(params)
         
         log10_A = param_map[f"{name}_log10_A"]
-        eta = param_map[f"{name}_eta"]
         e0 = param_map[f"{name}_e0"]
         
         pta_prior = pta.get_lnprior(param_map)
@@ -249,8 +248,8 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
         else:
             # print("Invalid param space.")
             if write_invalid_params:
-                with open(f"{chaindir}/invalid_params.txt", "a") as nvp:
-                    nvp.write(f"{log10_A}    {eta}   {e0}    {msg}" + "\n")
+                with open(f"{chaindir}/invalid_params.txt", "a") as ip:
+                    ip.write(f"{e0}    {eta}   {log10_A}    {msg}" + "\n")
             return -np.inf
 
     return gwecc_target_prior_fn
@@ -262,6 +261,7 @@ get_lnprior = gwecc_target_prior_my(
     target_params["tref"],
     tmax,
     log10_F=target_params["log10_F"],
+    eta=eta,
     name=name,
 )
 
@@ -337,10 +337,7 @@ np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
 # save setting.json file
 with open(f"{chaindir}/setting.json", "w") as f:
     json.dump(setting, f, indent = 4)
-
-# copying the python files to the chain directory for reference
-shutil.copy("search_irn_crn_gwecc.py", f"{chaindir}/search_irn_crn_gwecc.py")
-shutil.copy("get_groups_jumps.py", f"{chaindir}/get_groups_jumps.py")
+# shutil.copy(setting_file, f"{chaindir}/setting.json")
 
 # save groups file
 with open(f"{chaindir}/groups.txt", "w") as f:
@@ -396,7 +393,7 @@ if add_jumps:
 write_invalid_params = True
         
 sampler.sample(
-    x0, Niter, SCAMweight=20, AMweight=25, DEweight=15, writeHotChains=hotchains
+    x0, Niter, SCAMweight=20, AMweight=20, DEweight=20, writeHotChains=hotchains
 )
 
 print("Sampler run completed successfully.")
