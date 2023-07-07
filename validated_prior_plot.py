@@ -9,8 +9,7 @@ from enterprise.signals import white_signals
 from enterprise.signals import gp_signals
 from enterprise.signals import signal_base
 
-from enterprise_gwecc import gwecc_target_block, PsrDistPrior
-from juliacall import Main as jl
+from enterprise_gwecc import gwecc_target_block, PsrDistPrior, validate_params_target
 
 import corner
 import matplotlib.pyplot as plt
@@ -33,17 +32,17 @@ priors = {
     "cos_gwtheta": target_params["cos_gwtheta"],
     "gwphi": target_params["gwphi"],
     "gwdist": target_params["gwdist"],
-    "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
-    "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
-    "eta": parameter.Uniform(0.001, 0.25)(f"{name}_eta"),
+    "psi": 0.0,
+    "cos_inc": 0.0,
+    "eta": parameter.Uniform(0.01, 0.25)(f"{name}_eta"),
     "log10_F": target_params["log10_F"],
-    "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
-    "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
+    "e0": parameter.Uniform(0.01, 0.8)(f"{name}_e0"),
+    "gamma0": 0.0,
     "gammap": 0.0,
-    "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
+    "l0": 0.0,
     "lp": 0.0,
-    "log10_A": parameter.Uniform(-12, -6)(f"{name}_log10_A"),
-    "psrdist": PsrDistPrior(psrdist_info),
+    "log10_A": parameter.Uniform(-11, -5)(f"{name}_log10_A"),
+    "psrdist": 1.0,
 }
 
 parfile = list(sorted(glob.glob(f"{datadir}par/*gls.par")))[0]
@@ -75,7 +74,7 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
         
         if pta_prior == -np.inf:
             return pta_prior
-        elif jl.validate_params_target(
+        elif validate_params_target(
             log10_A,
             eta,
             log10_F,
@@ -83,7 +82,7 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
             gwdist,
             tref,
             tmax,
-        ):
+        )[0]:
             return pta_prior
         else:
             return -np.inf
@@ -100,8 +99,25 @@ get_lnprior = gwecc_target_prior_my(
     name=name,
 )
 
-prior_samples = np.array([[par.sample() for par in pta.params] for _ in range(100000)])
-validated_prior_samples = np.array([p for p in prior_samples if np.isfinite(get_lnprior(p))])
+prior_samples = np.array([[par.sample() for par in pta.params] for _ in range(2000000)])
 
-corner.corner(validated_prior_samples[:,[1,2,5]], labels=pta.param_names)
+validated_prior_samples = []
+rejected_prior_samples = []
+for p in prior_samples:
+    if np.isfinite(get_lnprior(p)):
+        validated_prior_samples.append(p)
+    else:
+        rejected_prior_samples.append(p)
+
+fig = corner.corner(np.array(validated_prior_samples), labels=np.array(pta.param_names), plot_contours=False)
+#corner.corner(np.array(rejected_prior_samples), labels=np.array(pta.param_names), color="red", fig=fig, plot_contours=False)
 plt.show()
+
+with open("validated_prior_samples.txt", "a") as f:
+    f.write("\n")
+    np.savetxt(f, validated_prior_samples)
+
+
+with open("rejected_prior_samples.txt", "a") as f:
+    f.write("\n")
+    np.savetxt(f, rejected_prior_samples)
