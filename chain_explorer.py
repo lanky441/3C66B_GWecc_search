@@ -51,11 +51,11 @@ print(f"Chain shape = {chain.shape}")
 burn = int(chain.shape[0] * burn_frac)
 
 if comp_NG:
-        NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_thinned.txt')
-        print(f"NG12p5 chain shape = {NG12p5chain.shape}")
+    NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_thinned.txt')
+    print(f"NG12p5 chain shape = {NG12p5chain.shape}")
 
-        # Reading the names of the parameters present in the chain
-        NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
+    # Reading the names of the parameters present in the chain
+    NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
 
 if plot_noise_chains:
     for psrnum, psr in enumerate(psrlist):
