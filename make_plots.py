@@ -91,8 +91,8 @@ A_prior_ws = log2linear_weight(logAv, -12, -6)
 num_bins = 8
 
 # Calculate the bin indices for the first two parameters
-e_bins = np.linspace(0, 0.8, num_bins + 1)
-eta_bins = np.linspace(0, 0.25, num_bins + 1)
+e_bins = np.linspace(0.001, 0.8, num_bins + 1)
+eta_bins = np.linspace(0.001, 0.25, num_bins + 1)
 
 # print(e_bins, eta_bins)
 
