@@ -51,11 +51,11 @@ print(f"Chain shape = {chain.shape}")
 burn = int(chain.shape[0] * burn_frac)
 
 if comp_NG:
-        NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_thinned.txt')
-        print(f"NG12p5 chain shape = {NG12p5chain.shape}")
+    NG12p5chain = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_thinned.txt')
+    print(f"NG12p5 chain shape = {NG12p5chain.shape}")
 
-        # Reading the names of the parameters present in the chain
-        NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
+    # Reading the names of the parameters present in the chain
+    NG12p5params = np.genfromtxt('data/NG12p5_chain_5f_free_gamma_params.txt', dtype='str')
 
 if plot_noise_chains:
     for psrnum, psr in enumerate(psrlist):
@@ -169,11 +169,11 @@ if plot_gwb_params:
     gwb_gamma_idx = np.where(param_names == "gwb_gamma")[0][0]
 
     figure = corner.corner(chain[burn:, gwb_gamma_idx:gwb_gamma_idx+2], labels=["gwb_gamma", "gwb_log10_A"],
-                           color='C0', hist_kwargs={"density":True})
+                           color='C0', plot_contours=False, hist_kwargs={"density":True})
     if comp_NG:
         gwb_gamma_NG_idx = np.where(NG12p5params == "gwb_gamma")[0][0]
         corner.corner(NG12p5chain[:, gwb_gamma_NG_idx:gwb_gamma_NG_idx+2], fig=figure, 
-                      labels=["gwb_gamma", "gwb_log10_A"], color='C1', hist_kwargs={"density":True})
+                      labels=["gwb_gamma", "gwb_log10_A"], color='C1', plot_contours=False, hist_kwargs={"density":True})
     plt.show()
 
 plt.plot(chain[burn:, -3])
@@ -186,15 +186,15 @@ if plot_A_e_eta:
     eta_idx = np.where(param_names == "gwecc_eta")[0][0]
     A_idx = np.where(param_names == "gwecc_log10_A")[0][0]
     figure2 = corner.corner(chain[burn:, [e_idx, eta_idx, A_idx]], labels=["e0", "eta", "log10_A"],
-                           color='C0', hist_kwargs={"density":True})
+                           color='C0', plot_contours=False, hist_kwargs={"density":True})
     
     if plot_invalid_param:
-        invalid_params = np.genfromtxt(f"{chain_folder}/invalid_params.txt")
+        invalid_params = np.genfromtxt(f"{chain_folder}/invalid_params.txt", dtype=None, usecols = (0, 1, 2))
         corner.corner(invalid_params[:, [2, 1, 0]], fig=figure2, 
-                     color='C1', hist_kwargs={"density":True})
+                     color='C1', plot_contours=False, hist_kwargs={"density":True})
     
     plt.show()
     
 
-corner.corner(chain[burn:,-ndim-4:-4], labels=["_".join(p.split("_")[1:]) for p in gwb_ecw_params])
+corner.corner(chain[burn:,-ndim-4:-4], labels=["_".join(p.split("_")[1:]) for p in gwb_ecw_params],  plot_contours=False)
 plt.show()

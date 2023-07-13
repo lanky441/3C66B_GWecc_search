@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=earth_4mpi
+#SBATCH --job-name=ear_4_23Jun
 
 #SBATCH -p mamclaughlin
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --ntasks=4
 
 which python

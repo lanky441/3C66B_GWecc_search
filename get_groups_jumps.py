@@ -22,23 +22,7 @@ def get_ew_groups(pta, name='gwecc'):
         # create parameter groups for the red noise parameters
         rnpsrs = [p.split('_')[0] for p in params if 'red_noise_log10_A' in p]
         for psr in rnpsrs:
-            groups.extend([[params.index(psr + '_red_noise_gamma'), params.index(psr + '_red_noise_log10_A')]])
-
-    if f'{name}_e0' in params:
-        gpars = [x for x in params if name in x] #global params
-        groups.append([params.index(gp) for gp in gpars]) #add global params
-
-        #pair global params
-        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_eta')]])
-        # groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_e0')]])
-        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_cos_inc')]])
-        # groups.extend([[params.index(f'{name}_eta'), params.index(f'{name}_cos_inc')]])
-        # groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_l0')]])
-        groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_psi')]])
-        # groups.extend([[params.index(f'{name}_psi'), params.index(f'{name}_l0')]])
-
-    if 'gwb_gamma' in params:
-        groups.extend([[params.index('gwb_gamma'), params.index('gwb_log10_A')]])
+            groups.extend([[params.index(psr + '_red_noise_gamma'), params.index(psr + '_red_noise_log10_A')]])    
     
     psrdist_params = [ p for p in params if 'psrdist' in p ]
     lp_params = [ p for p in params if 'lp' in p ]
@@ -49,6 +33,23 @@ def get_ew_groups(pta, name='gwecc'):
             groups.extend([[params.index(pd), params.index(lp), params.index(gp)]])
     else:
         print("Not searching for psrdist!")
+        
+    if 'gwb_gamma' in params:
+        groups.extend([[params.index('gwb_gamma'), params.index('gwb_log10_A')]])
+        
+    if f'{name}_e0' in params:
+        gpars = [x for x in params if name in x] #global params
+        groups.append([params.index(gp) for gp in gpars]) #add global params
+
+        #pair global params
+        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_eta')]])
+        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_e0')]])
+        groups.extend([[params.index(f'{name}_eta'), params.index(f'{name}_e0')]])
+        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_eta'), params.index(f'{name}_e0')]])
+        groups.extend([[params.index(f'{name}_log10_A'), params.index(f'{name}_cos_inc')]])
+        groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_psi')]])
+        # groups.extend([[params.index(f'{name}_gamma0'), params.index(f'{name}_l0')]])
+        # groups.extend([[params.index(f'{name}_psi'), params.index(f'{name}_l0')]])
         
     return groups
 
@@ -218,18 +219,3 @@ class JumpProposalLD(object):
         name_string = string_name
         draw.__name__ = 'draw_from_{}_prior'.format(name_string)
         return draw
-    
-    def gwecc_log10_A_low_jump(self, x, iter, beta):
-        ##written by SJV for 11yr CW
-        q = x.copy()
-        lqxy = 0
-
-        param_name = "gwecc_log10_A"
-        idx = self.pnames.index(param_name)
-        
-        if x[idx] > -8:
-            q[idx] = x[idx] - 2
-        else:
-            q[idx] = self.params[idx].sample()
-                
-        return q, float(lqxy)

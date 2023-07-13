@@ -44,6 +44,8 @@ psrlist_include = setting["psr_include"]
 
 gamma_vary = setting["gamma_vary"]
 name = setting["name"]
+emax = setting["emax"]
+etamin = setting["etamin"]
 psrterm = setting["psrterm"]
 tie = setting["tie_psrterm"]
 
@@ -67,9 +69,9 @@ if tie or not psrterm:
         "gwdist": target_params["gwdist"],
         "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
         "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
-        "eta": parameter.Uniform(0.001, 0.25)(f"{name}_eta"),
+        "eta": parameter.Uniform(etamin, 0.25)(f"{name}_eta"),
         "log10_F": target_params["log10_F"],
-        "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
+        "e0": parameter.Uniform(0.001, emax)(f"{name}_e0"),
         "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
         "gammap": 0.0,
         "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
@@ -85,9 +87,9 @@ else:
         "gwdist": target_params["gwdist"],
         "psi": parameter.Uniform(0.0, np.pi)(f"{name}_psi"),
         "cos_inc": parameter.Uniform(-1, 1)(f"{name}_cos_inc"),
-        "eta": parameter.Uniform(0.001, 0.25)(f"{name}_eta"),
+        "eta": parameter.Uniform(etamin, 0.25)(f"{name}_eta"),
         "log10_F": target_params["log10_F"],
-        "e0": parameter.Uniform(0.001, 0.9)(f"{name}_e0"),
+        "e0": parameter.Uniform(0.001, emax)(f"{name}_e0"),
         "gamma0": parameter.Uniform(0.0, np.pi)(f"{name}_gamma0"),
         "gammap": parameter.Uniform(0.0, np.pi),
         "l0": parameter.Uniform(0.0, 2 * np.pi)(f"{name}_l0"),
@@ -231,7 +233,8 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
         
         if pta_prior == -np.inf:
             return pta_prior
-        elif jl.validate_params_target(
+        
+        valid, msg = jl.validate_params_target(
             log10_A,
             eta,
             log10_F,
@@ -239,13 +242,15 @@ def gwecc_target_prior_my(pta, gwdist, tref, tmax, log10_F, name="gwecc"):
             gwdist,
             tref,
             tmax,
-        ):
+        )
+        
+        if valid:
             return pta_prior
         else:
             # print("Invalid param space.")
             if write_invalid_params:
                 with open(f"{chaindir}/invalid_params.txt", "a") as nvp:
-                    nvp.write(f"{log10_A}    {eta}   {e0}" + "\n")
+                    nvp.write(f"{log10_A}    {eta}   {e0}    {msg}" + "\n")
             return -np.inf
 
     return gwecc_target_prior_fn
@@ -330,7 +335,12 @@ np.savetxt(f"{chaindir}/params.txt", list(map(str, pta.param_names)), fmt="%s")
 np.savetxt(f"{chaindir}/psrlist.txt", np.array(psrlist), fmt="%s")
 
 # save setting.json file
-shutil.copy(setting_file, f"{chaindir}/setting.json")
+with open(f"{chaindir}/setting.json", "w") as f:
+    json.dump(setting, f, indent = 4)
+
+# copying the python files to the chain directory for reference
+shutil.copy("search_irn_crn_gwecc.py", f"{chaindir}/search_irn_crn_gwecc.py")
+shutil.copy("get_groups_jumps.py", f"{chaindir}/get_groups_jumps.py")
 
 # save groups file
 with open(f"{chaindir}/groups.txt", "w") as f:
@@ -358,7 +368,6 @@ if add_jumps:
     for ew in ew_params:
         if "log10_A" in ew:
             sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 10)
-            sampler.addProposalToCycle(jpLD.gwecc_log10_A_low_jump, 5)
         else:
             sampler.addProposalToCycle(jp.draw_from_par_prior(ew), 5)
 
@@ -387,7 +396,7 @@ if add_jumps:
 write_invalid_params = True
         
 sampler.sample(
-    x0, Niter, SCAMweight=20, AMweight=20, DEweight=20, writeHotChains=hotchains
+    x0, Niter, SCAMweight=20, AMweight=25, DEweight=15, writeHotChains=hotchains
 )
 
 print("Sampler run completed successfully.")

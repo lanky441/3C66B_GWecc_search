@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=earth_1
+#SBATCH --job-name=earth_eta001fix
 
 #SBATCH -p mamclaughlin
 #SBATCH --mem=64G
@@ -9,6 +9,6 @@
 which python
 bash print_info.sh
 
-python search_irn_crn_gwecc.py -s irn_crn_gwecc_earth.json
+python search_irn_crn_gwecc_fixed_eta.py -s irn_crn_gwecc_earth.json
 
 echo "Run complete."
